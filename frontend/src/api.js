@@ -54,15 +54,6 @@ export function listarVagas() {
 }
 
 /**
- * GET /api/cursos/seguranca
- *
- * Retorno: [{ id, titulo, descricao, categoria }]
- */
-export function listarTrilhaSeguranca() {
-  return request("/api/cursos/seguranca");
-}
-
-/**
  * GET /api/vagas/exemplos
  *
  * Retorno:

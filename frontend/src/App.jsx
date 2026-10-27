@@ -4,7 +4,6 @@ import TopBar from './components/TopBar';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ValidationPanel from './components/ValidationPanel';
-import Courses from './components/Courses';
 import FAQ from './components/FAQ';
 import ArchitectureModal from './components/ArchitectureModal';
 import Footer from './components/Footer';
@@ -14,7 +13,6 @@ export default function App() {
   const [highContrast, setHighContrast] = useState(false);
   const [architectureOpen, setArchitectureOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [cursosContexto, setCursosContexto] = useState(null);
   const validationPanelRef = useRef(null);
 
   const showToast = useCallback((message) => {
@@ -74,11 +72,9 @@ export default function App() {
         <ValidationPanel
           ref={validationPanelRef}
           onToast={showToast}
-          onCursosChange={setCursosContexto}
         />
 
         <div className="rounded-b-xl bg-white px-5 pb-8 sm:px-8">
-          <Courses contexto={cursosContexto} onToast={showToast} />
           <FAQ />
         </div>
       </main>

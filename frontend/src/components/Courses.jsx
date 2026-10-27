@@ -25,52 +25,42 @@ const categorias = {
 
 const categoriaPadrao = { icon: GraduationCap, color: 'bg-red-100 text-bradesco-red' };
 
-function cabecalho(contexto) {
-  const cargo = contexto?.cargo;
-
-  switch (contexto?.modo) {
-    case 'valido':
-      return {
-        titulo: 'Comece estudando com a gente:',
-        subtitulo: `Cursos selecionados para a vaga de ${cargo}.`,
-      };
-    case 'invalido':
-      return {
-        titulo: 'Não desista: seu próximo passo começa aqui',
-        subtitulo:
-          'Essa oferta não foi confirmada, mas você pode se preparar para oportunidades reais com estes cursos gratuitos.',
-      };
-    case 'cargo':
-      return {
-        titulo: 'Cursos recomendados',
-        subtitulo: `Sugestões educativas para a vaga de ${cargo}.`,
-      };
-    default:
-      return {
-        titulo: 'Cursos recomendados',
-        subtitulo: 'Sugestões educativas para desenvolver suas habilidades.',
-      };
+function cabecalho(modo, cargo) {
+  if (modo === 'valido') {
+    return {
+      titulo: 'Comece estudando com a gente:',
+      subtitulo: `Cursos selecionados para a vaga de ${cargo}.`,
+    };
   }
+
+  return {
+    titulo: 'Não desista: seu próximo passo começa aqui',
+    subtitulo:
+      'Essa oferta não foi confirmada, mas você pode se preparar para oportunidades reais com estes cursos gratuitos.',
+  };
 }
 
-export default function Courses({ contexto, onToast }) {
-  const { titulo, subtitulo } = cabecalho(contexto);
-  const cursos = contexto?.cursos ?? [];
-  const modo = contexto?.modo;
+/**
+ * Exibida somente após uma validação.
+ * modo: 'valido' | 'invalido'
+ * compact: layout de coluna (usado ao lado do formulário de denúncia)
+ */
+export default function Courses({ modo, cargo, cursos = [], compact = false, onToast }) {
+  const { titulo, subtitulo } = cabecalho(modo, cargo);
 
   return (
     <section
       id="cursos"
       aria-live="polite"
-      className="mt-12 scroll-mt-28 border-t border-gray-200 pt-8"
+      className={compact ? '' : 'mt-8'}
     >
       <div
-        className={`mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center ${
+        className={`mb-6 flex flex-col items-start justify-between gap-3 ${
+          compact ? '' : 'sm:flex-row sm:items-center'
+        } ${
           modo === 'valido'
             ? 'hc-surface rounded-xl border border-emerald-200 bg-emerald-50 p-5'
-            : modo === 'invalido'
-              ? 'hc-surface rounded-xl border border-red-200 bg-bradesco-lightRed p-5'
-              : ''
+            : 'hc-surface rounded-xl border border-red-200 bg-bradesco-lightRed p-5'
         }`}
       >
         <div className="flex items-start gap-3">
@@ -113,7 +103,11 @@ export default function Courses({ contexto, onToast }) {
           Sugestões de cursos indisponíveis no momento.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div
+          className={`grid grid-cols-1 ${
+            compact ? 'gap-4 sm:grid-cols-2' : 'gap-6 md:grid-cols-3'
+          }`}
+        >
           {cursos.map((curso) => {
             const { icon: Icon, color } = categorias[curso.categoria] ?? categoriaPadrao;
 

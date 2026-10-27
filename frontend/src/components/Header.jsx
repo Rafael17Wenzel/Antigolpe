@@ -9,8 +9,6 @@ import {
 
 const links = [
   { href: '#validador', label: 'Validar Vaga/Token' },
-  { href: '#denunciar', label: 'Denunciar Phishing' },
-  { href: '#cursos', label: 'Fundação Bradesco' },
   { href: '#faq', label: 'Dicas de Segurança' },
 ];
 

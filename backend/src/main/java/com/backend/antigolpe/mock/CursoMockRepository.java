@@ -20,7 +20,7 @@ public class CursoMockRepository {
     private static final String NEGOCIOS = "Negócios e Inovação";
     private static final String DESENVOLVIMENTO = "Desenvolvimento Pessoal e Profissional";
 
-    /** Trilha de segurança: estado inicial e reforço quando a vaga não é confirmada. */
+    /** Trilha de segurança: reforço exibido quando a vaga não é confirmada. */
     public static final List<String> TRILHA_SEGURANCA = List.of(
         "seguranca-ti",
         "lgpd",
@@ -58,9 +58,5 @@ public class CursoMockRepository {
         return ids.stream()
             .map(cursos::get)
             .toList();
-    }
-
-    public List<CursoResponse> trilhaSeguranca() {
-        return buscar(TRILHA_SEGURANCA);
     }
 }

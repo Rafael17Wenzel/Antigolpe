@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   BadgeCheck,
   Briefcase,
@@ -15,8 +15,8 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 
+import Courses from './Courses';
 import {
-  listarTrilhaSeguranca,
   listarVagas,
   obterExemplos,
   registrarDenuncia,
@@ -32,11 +32,10 @@ function Spinner() {
   return <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />;
 }
 
-export default function ValidationPanel({ ref, onToast, onCursosChange }) {
+export default function ValidationPanel({ ref, onToast }) {
   // Dados mockados vindos do backend
   const [vagas, setVagas] = useState([]);
   const [exemplos, setExemplos] = useState(null);
-  const [trilhaSeguranca, setTrilhaSeguranca] = useState([]);
   const [loadingBase, setLoadingBase] = useState(true);
   const [baseError, setBaseError] = useState(null);
 
@@ -54,19 +53,17 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
   const [sending, setSending] = useState(false);
   const [report, setReport] = useState(null);
   const [reportError, setReportError] = useState(null);
-  const [highlightReport, setHighlightReport] = useState(false);
 
-  const reportRef = useRef(null);
+  const resultadoNegativoRef = useRef(null);
   const descricaoRef = useRef(null);
 
   // Busca vagas e exemplos mockados no backend
   const buscarBase = useCallback(
     () =>
-      Promise.all([listarVagas(), obterExemplos(), listarTrilhaSeguranca()])
-        .then(([listaVagas, listaExemplos, listaSeguranca]) => {
+      Promise.all([listarVagas(), obterExemplos()])
+        .then(([listaVagas, listaExemplos]) => {
           setVagas(listaVagas);
           setExemplos(listaExemplos);
-          setTrilhaSeguranca(listaSeguranca);
         })
         .catch((error) => setBaseError(error.message))
         .finally(() => setLoadingBase(false)),
@@ -77,56 +74,35 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
     buscarBase();
   }, [buscarBase]);
 
-  // Contexto da seção de cursos: inicial, cargo selecionado, válido ou não confirmado
-  const contextoCursos = useMemo(() => {
-    if (result) {
-      return {
-        modo: result.valido ? 'valido' : 'invalido',
-        cargo: result.vaga,
-        cursos: result.cursosRecomendados ?? [],
-      };
-    }
-
-    const vagaSelecionada = vagas.find((item) => item.id === vaga);
-
-    if (vagaSelecionada) {
-      return { modo: 'cargo', cargo: vagaSelecionada.cargo, cursos: vagaSelecionada.cursos ?? [] };
-    }
-
-    return { modo: 'inicial', cargo: null, cursos: trilhaSeguranca };
-  }, [result, vagas, vaga, trilhaSeguranca]);
-
-  useEffect(() => {
-    onCursosChange?.(contextoCursos);
-  }, [contextoCursos, onCursosChange]);
-
   function recarregarBase() {
     setLoadingBase(true);
     setBaseError(null);
     buscarBase();
   }
 
-  const prepararDenuncia = useCallback((link) => {
-    setUrlSuspeita(link);
-    setReport(null);
-    setReportError(null);
-    setHighlightReport(true);
-
-    requestAnimationFrame(() => {
-      reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      descricaoRef.current?.focus({ preventScroll: true });
-    });
+  const rolarParaDenuncia = useCallback(() => {
+    resultadoNegativoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    descricaoRef.current?.focus({ preventScroll: true });
   }, []);
+
+  // Validação negativa: denúncia + cursos aparecem e a tela rola até eles.
+  // Validação positiva: os cursos aparecem abaixo, sem rolagem.
+  useEffect(() => {
+    if (result && !result.valido) rolarParaDenuncia();
+  }, [result, rolarParaDenuncia]);
 
   const executarValidacao = useCallback(
     async (vagaId, valor) => {
       setValidating(true);
       setResult(null);
       setValidationError(null);
-      setHighlightReport(false);
+      setReport(null);
+      setReportError(null);
 
       try {
         const resposta = await validarVaga(vagaId, valor);
+
+        if (!resposta.valido) setUrlSuspeita(resposta.tokenConsultado);
         setResult(resposta);
 
         if (resposta.valido) {
@@ -136,7 +112,6 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
             message: 'Oferta não confirmada. Você pode denunciar o link abaixo.',
             type: 'warning',
           });
-          prepararDenuncia(resposta.tokenConsultado);
         }
       } catch (error) {
         setValidationError(error.message);
@@ -144,7 +119,7 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
         setValidating(false);
       }
     },
-    [onToast, prepararDenuncia],
+    [onToast],
   );
 
   // Testes rápidos disparados pelos botões do Hero (via ref no App)
@@ -201,7 +176,6 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
       });
 
       setReport(resposta);
-      setHighlightReport(false);
       setDescricao('');
       onToast({ message: `Denúncia simulada: ${resposta.protocolo}`, type: 'success' });
     } catch (error) {
@@ -404,7 +378,7 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
               </dl>
               <button
                 type="button"
-                onClick={() => prepararDenuncia(result.tokenConsultado)}
+                onClick={rolarParaDenuncia}
                 className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-bradesco-red hover:underline"
               >
                 <Send size={14} />
@@ -415,111 +389,131 @@ export default function ValidationPanel({ ref, onToast, onCursosChange }) {
         </div>
       </div>
 
-      {/* Denúncia */}
-      <div
-        id="denunciar"
-        ref={reportRef}
-        className={`hc-surface mt-8 scroll-mt-28 rounded-xl border p-5 transition ${
-          highlightReport
-            ? 'border-bradesco-red bg-bradesco-lightRed ring-4 ring-red-100'
-            : 'border-gray-200 bg-white'
-        }`}
-      >
-        <div className="mb-4 flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white">
-            <ShieldAlert size={20} />
-          </span>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Denunciar phishing</h2>
-            <p className="hc-muted text-xs text-gray-500">
-              Envio simulado: a denúncia gera um protocolo fictício e não é encaminhada a
-              nenhum sistema externo.
-            </p>
-          </div>
-        </div>
+      {/* Validação positiva: cursos do cargo, sem rolagem */}
+      {result?.valido && (
+        <Courses
+          modo="valido"
+          cargo={result.vaga}
+          cursos={result.cursosRecomendados}
+          onToast={onToast}
+        />
+      )}
 
-        <form onSubmit={handleDenunciar} noValidate className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label htmlFor="urlSuspeita" className={labelClass}>
-              Link ou token suspeito *
-            </label>
-            <input
-              id="urlSuspeita"
-              value={urlSuspeita}
-              onChange={(event) => setUrlSuspeita(event.target.value)}
-              disabled={sending}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="https://…"
-              className={`${inputClass} font-mono`}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="emailContato" className={labelClass}>
-              E-mail para contato (opcional)
-            </label>
-            <input
-              id="emailContato"
-              type="email"
-              value={emailContato}
-              onChange={(event) => setEmailContato(event.target.value)}
-              disabled={sending}
-              autoComplete="off"
-              placeholder="voce@exemplo.com"
-              className={inputClass}
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label htmlFor="descricao" className={labelClass}>
-              Detalhes *
-            </label>
-            <textarea
-              id="descricao"
-              ref={descricaoRef}
-              value={descricao}
-              onChange={(event) => setDescricao(event.target.value)}
-              disabled={sending}
-              rows={3}
-              placeholder="Como você recebeu a mensagem? Pediram pagamento ou dados pessoais?"
-              className={`${inputClass} resize-y`}
-            />
-            <p className="hc-muted mt-1 text-[11px] text-gray-500">
-              Não inclua senhas, documentos ou dados bancários.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 md:col-span-2 md:flex-row md:items-center md:justify-between">
-            <div aria-live="polite" className="text-xs">
-              {reportError && (
-                <p role="alert" className="flex items-start gap-2 font-semibold text-red-700">
-                  <CircleAlert size={15} className="mt-0.5 shrink-0" />
-                  {reportError}
+      {/* Validação negativa: denúncia (esquerda) e cursos (direita) lado a lado */}
+      {result && !result.valido && (
+        <div
+          ref={resultadoNegativoRef}
+          className="mt-8 grid scroll-mt-28 grid-cols-1 items-start gap-6 lg:grid-cols-2"
+        >
+          <div
+            id="denunciar"
+            className="hc-surface rounded-xl border border-bradesco-red bg-bradesco-lightRed p-5"
+          >
+            <div className="mb-4 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white">
+                <ShieldAlert size={20} />
+              </span>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Denunciar phishing</h2>
+                <p className="hc-muted text-xs text-gray-500">
+                  Envio simulado: a denúncia gera um protocolo fictício e não é encaminhada a
+                  nenhum sistema externo.
                 </p>
-              )}
-              {report && (
-                <p className="flex items-start gap-2 text-emerald-800">
-                  <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
-                  <span>
-                    {report.mensagem} Protocolo:{' '}
-                    <strong className="font-mono">{report.protocolo}</strong>
-                  </span>
-                </p>
-              )}
+              </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={sending}
-              className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {sending ? <Spinner /> : <Send size={17} />}
-              {sending ? 'Enviando…' : 'Enviar denúncia simulada'}
-            </button>
+            <form onSubmit={handleDenunciar} noValidate className="grid grid-cols-1 gap-4">
+              <div>
+                <label htmlFor="urlSuspeita" className={labelClass}>
+                  Link ou token suspeito *
+                </label>
+                <input
+                  id="urlSuspeita"
+                  value={urlSuspeita}
+                  onChange={(event) => setUrlSuspeita(event.target.value)}
+                  disabled={sending}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="https://…"
+                  className={`${inputClass} font-mono`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="emailContato" className={labelClass}>
+                  E-mail para contato (opcional)
+                </label>
+                <input
+                  id="emailContato"
+                  type="email"
+                  value={emailContato}
+                  onChange={(event) => setEmailContato(event.target.value)}
+                  disabled={sending}
+                  autoComplete="off"
+                  placeholder="voce@exemplo.com"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="descricao" className={labelClass}>
+                  Detalhes *
+                </label>
+                <textarea
+                  id="descricao"
+                  ref={descricaoRef}
+                  value={descricao}
+                  onChange={(event) => setDescricao(event.target.value)}
+                  disabled={sending}
+                  rows={3}
+                  placeholder="Como você recebeu a mensagem? Pediram pagamento ou dados pessoais?"
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="hc-muted mt-1 text-[11px] text-gray-500">
+                  Não inclua senhas, documentos ou dados bancários.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div aria-live="polite" className="text-xs">
+                  {reportError && (
+                    <p role="alert" className="flex items-start gap-2 font-semibold text-red-700">
+                      <CircleAlert size={15} className="mt-0.5 shrink-0" />
+                      {reportError}
+                    </p>
+                  )}
+                  {report && (
+                    <p className="flex items-start gap-2 text-emerald-800">
+                      <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                      <span>
+                        {report.mensagem} Protocolo:{' '}
+                        <strong className="font-mono">{report.protocolo}</strong>
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-gray-900 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {sending ? <Spinner /> : <Send size={17} />}
+                  {sending ? 'Enviando…' : 'Enviar denúncia simulada'}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
-      </div>
+
+          <Courses
+            modo="invalido"
+            cargo={result.vaga}
+            cursos={result.cursosRecomendados}
+            compact
+            onToast={onToast}
+          />
+        </div>
+      )}
     </section>
   );
 }
