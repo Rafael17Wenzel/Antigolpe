@@ -13,10 +13,14 @@ import java.util.Optional;
 public class VagaMockRepository {
 
     private final List<VagaMock> vagas = List.of(
-        new VagaMock("seguranca-informacao", "Analista de Segurança da Informação", "BRD-2026-SEC89"),
-        new VagaMock("atendimento-agencia", "Analista de Atendimento (Agência)", "BRD-2026-X89K"),
-        new VagaMock("desenvolvimento-software", "Desenvolvedor(a) de Software", "BRD-DEV-4022"),
-        new VagaMock("recursos-humanos", "Analista de Recursos Humanos", "BRD-RH-1002")
+        new VagaMock("seguranca-informacao", "Analista de Segurança da Informação", "BRD-2026-SEC89",
+            List.of("seguranca-ti", "redes", "lgpd")),
+        new VagaMock("atendimento-agencia", "Analista de Atendimento (Agência)", "BRD-2026-X89K",
+            List.of("atendimento-publico", "educacao-financeira", "postura-imagem")),
+        new VagaMock("desenvolvimento-software", "Desenvolvedor(a) de Software", "BRD-DEV-4022",
+            List.of("logica-programacao", "java-basico", "etica-sistemas")),
+        new VagaMock("recursos-humanos", "Analista de Recursos Humanos", "BRD-RH-1002",
+            List.of("comunicacao-empresarial", "qualidade-vida", "lgpd"))
     );
 
     /** Exemplo de link de golpe usado no teste rápido "Simular Golpe / Phishing". */

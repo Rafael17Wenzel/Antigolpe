@@ -14,6 +14,7 @@ export default function App() {
   const [highContrast, setHighContrast] = useState(false);
   const [architectureOpen, setArchitectureOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [cursosContexto, setCursosContexto] = useState(null);
   const validationPanelRef = useRef(null);
 
   const showToast = useCallback((message) => {
@@ -73,10 +74,11 @@ export default function App() {
         <ValidationPanel
           ref={validationPanelRef}
           onToast={showToast}
+          onCursosChange={setCursosContexto}
         />
 
         <div className="rounded-b-xl bg-white px-5 pb-8 sm:px-8">
-          <Courses onToast={showToast} />
+          <Courses contexto={cursosContexto} onToast={showToast} />
           <FAQ />
         </div>
       </main>

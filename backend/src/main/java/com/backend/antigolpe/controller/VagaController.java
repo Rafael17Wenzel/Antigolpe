@@ -1,9 +1,11 @@
 package com.backend.antigolpe.controller;
 
+import com.backend.antigolpe.dto.CursoResponse;
 import com.backend.antigolpe.dto.ExemplosResponse;
 import com.backend.antigolpe.dto.ValidacaoRequest;
 import com.backend.antigolpe.dto.ValidacaoResponse;
 import com.backend.antigolpe.dto.VagaResponse;
+import com.backend.antigolpe.mock.CursoMockRepository;
 import com.backend.antigolpe.mock.VagaMock;
 import com.backend.antigolpe.mock.VagaMockRepository;
 import org.springframework.http.HttpStatus;
@@ -12,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/vagas")
@@ -28,15 +31,18 @@ public class VagaController {
             + "confirmar a oportunidade por um canal oficial.";
 
     private final VagaMockRepository repository;
+    private final CursoMockRepository cursoRepository;
 
-    public VagaController(VagaMockRepository repository) {
+    public VagaController(VagaMockRepository repository,
+                          CursoMockRepository cursoRepository) {
         this.repository = repository;
+        this.cursoRepository = cursoRepository;
     }
 
     @GetMapping
     public List<VagaResponse> listar() {
         return repository.listar().stream()
-            .map(v -> new VagaResponse(v.id(), v.cargo()))
+            .map(v -> new VagaResponse(v.id(), v.cargo(), cursoRepository.buscar(v.cursos())))
             .toList();
     }
 
@@ -79,7 +85,8 @@ public class VagaController {
                 "VALIDO_DEMONSTRACAO",
                 "Token reconhecido na base fictícia do protótipo para esta vaga.",
                 vaga.cargo(),
-                token
+                token,
+                cursoRepository.buscar(vaga.cursos())
             );
         }
 
@@ -88,7 +95,19 @@ public class VagaController {
             "NAO_CONFIRMADO",
             dono.isPresent() ? MSG_OUTRA_VAGA : MSG_NAO_CONFIRMADO,
             vaga.cargo(),
-            token
+            token,
+            cursosAcolhimento(vaga)
         );
+    }
+
+    /** Trilha de segurança primeiro, depois os cursos do cargo (sem repetir). */
+    private List<CursoResponse> cursosAcolhimento(VagaMock vaga) {
+        List<String> ids = Stream.concat(
+                CursoMockRepository.TRILHA_SEGURANCA.stream(),
+                vaga.cursos().stream())
+            .distinct()
+            .toList();
+
+        return cursoRepository.buscar(ids);
     }
 }

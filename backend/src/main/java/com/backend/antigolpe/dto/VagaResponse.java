@@ -1,7 +1,10 @@
 package com.backend.antigolpe.dto;
 
-/** Vaga exposta ao frontend (sem o token). */
+import java.util.List;
+
+/** Vaga exposta ao frontend (sem o token), com os cursos do cargo. */
 public record VagaResponse(
     String id,
-    String cargo
+    String cargo,
+    List<CursoResponse> cursos
 ) {}

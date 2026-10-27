@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   BadgeCheck,
   Briefcase,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import {
+  listarTrilhaSeguranca,
   listarVagas,
   obterExemplos,
   registrarDenuncia,
@@ -31,10 +32,11 @@ function Spinner() {
   return <LoaderCircle size={18} className="animate-spin" aria-hidden="true" />;
 }
 
-export default function ValidationPanel({ ref, onToast }) {
+export default function ValidationPanel({ ref, onToast, onCursosChange }) {
   // Dados mockados vindos do backend
   const [vagas, setVagas] = useState([]);
   const [exemplos, setExemplos] = useState(null);
+  const [trilhaSeguranca, setTrilhaSeguranca] = useState([]);
   const [loadingBase, setLoadingBase] = useState(true);
   const [baseError, setBaseError] = useState(null);
 
@@ -60,10 +62,11 @@ export default function ValidationPanel({ ref, onToast }) {
   // Busca vagas e exemplos mockados no backend
   const buscarBase = useCallback(
     () =>
-      Promise.all([listarVagas(), obterExemplos()])
-        .then(([listaVagas, listaExemplos]) => {
+      Promise.all([listarVagas(), obterExemplos(), listarTrilhaSeguranca()])
+        .then(([listaVagas, listaExemplos, listaSeguranca]) => {
           setVagas(listaVagas);
           setExemplos(listaExemplos);
+          setTrilhaSeguranca(listaSeguranca);
         })
         .catch((error) => setBaseError(error.message))
         .finally(() => setLoadingBase(false)),
@@ -73,6 +76,29 @@ export default function ValidationPanel({ ref, onToast }) {
   useEffect(() => {
     buscarBase();
   }, [buscarBase]);
+
+  // Contexto da seção de cursos: inicial, cargo selecionado, válido ou não confirmado
+  const contextoCursos = useMemo(() => {
+    if (result) {
+      return {
+        modo: result.valido ? 'valido' : 'invalido',
+        cargo: result.vaga,
+        cursos: result.cursosRecomendados ?? [],
+      };
+    }
+
+    const vagaSelecionada = vagas.find((item) => item.id === vaga);
+
+    if (vagaSelecionada) {
+      return { modo: 'cargo', cargo: vagaSelecionada.cargo, cursos: vagaSelecionada.cursos ?? [] };
+    }
+
+    return { modo: 'inicial', cargo: null, cursos: trilhaSeguranca };
+  }, [result, vagas, vaga, trilhaSeguranca]);
+
+  useEffect(() => {
+    onCursosChange?.(contextoCursos);
+  }, [contextoCursos, onCursosChange]);
 
   function recarregarBase() {
     setLoadingBase(true);
@@ -253,7 +279,10 @@ export default function ValidationPanel({ ref, onToast }) {
               <select
                 id="vaga"
                 value={vaga}
-                onChange={(event) => setVaga(event.target.value)}
+                onChange={(event) => {
+                  setVaga(event.target.value);
+                  setResult(null);
+                }}
                 disabled={baseIndisponivel || validating}
                 className={`${inputClass} appearance-none pl-9 pr-9`}
               >

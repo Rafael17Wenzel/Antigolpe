@@ -47,10 +47,19 @@ async function request(endpoint, { method = "GET", data } = {}) {
 /**
  * GET /api/vagas
  *
- * Retorno: [{ id: string, cargo: string }]
+ * Retorno: [{ id: string, cargo: string, cursos: Curso[] }]
  */
 export function listarVagas() {
   return request("/api/vagas");
+}
+
+/**
+ * GET /api/cursos/seguranca
+ *
+ * Retorno: [{ id, titulo, descricao, categoria }]
+ */
+export function listarTrilhaSeguranca() {
+  return request("/api/cursos/seguranca");
 }
 
 /**
@@ -74,6 +83,9 @@ export function obterExemplos() {
  *   vaga: string,        // id da vaga (GET /api/vagas)
  *   tokenOuLink: string
  * }
+ *
+ * Retorno inclui cursosRecomendados: cursos do cargo (válido) ou
+ * trilha de segurança + cursos do cargo (não confirmado).
  */
 export function validarVaga(vaga, tokenOuLink) {
   return request("/api/vagas/validar", {
