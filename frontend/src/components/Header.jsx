@@ -1,57 +1,41 @@
 import { useState } from 'react';
-import {
-  Building2,
-  Menu,
-  X,
-  Network,
-  ShieldCheck,
-} from 'lucide-react';
+import { Building2, Menu, Network, ShieldCheck, X } from 'lucide-react';
 
 const links = [
-  { href: '#validador', label: 'Validar Vaga/Token' },
-  { href: '#faq', label: 'Dicas de Segurança' },
+  { href: '#validador', label: 'Validar vaga/token' },
+  { href: '#faq', label: 'Dicas de segurança' },
+  { href: '#/simulador', label: 'Simulador de chat' },
 ];
 
 export default function Header({ onOpenArchitecture }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  function navigateTo() {
-    setMobileOpen(false);
-  }
-
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-bradesco-red bg-white shadow-md">
+    <header className="contorno-ac sticky top-0 z-40 border-b-2 border-primaria bg-superficie shadow-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between gap-4">
-          <a
-            href="#topo"
-            aria-label="Ir ao início do protótipo"
-            className="flex shrink-0 items-center gap-3"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-bradesco-red text-white shadow-md">
-              <Building2 size={24} />
+          <a href="#topo" className="flex shrink-0 items-center gap-3 rounded">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primaria text-primaria-sobre shadow-md">
+              <Building2 size={24} aria-hidden="true" />
             </span>
 
             <span>
-              <span className="block text-2xl font-extrabold leading-none tracking-tight text-bradesco-red">
+              <span className="block text-2xl font-extrabold leading-none tracking-tight text-primaria">
                 bradesco
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                Segurança & Vagas
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-texto-suave">
+                Segurança &amp; Vagas · protótipo
               </span>
+              <span className="sr-only"> — ir para o início</span>
             </span>
           </a>
 
-          <nav
-            aria-label="Navegação principal"
-            className="hidden items-center gap-5 text-sm font-medium text-gray-700 lg:flex"
-          >
+          <nav aria-label="Navegação principal" className="hidden items-center gap-5 text-sm font-medium text-texto lg:flex">
             {links.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                onClick={navigateTo}
-                className="border-b-2 border-transparent py-2 transition hover:border-bradesco-red hover:text-bradesco-red"
+                className="border-b-2 border-transparent py-2 transition hover:border-primaria hover:text-primaria"
               >
                 {link.label}
               </a>
@@ -61,35 +45,33 @@ export default function Header({ onOpenArchitecture }) {
           <button
             type="button"
             onClick={onOpenArchitecture}
-            className="hidden items-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-800 transition hover:bg-gray-200 xl:flex"
+            className="hidden min-h-alvo items-center gap-2 rounded-lg border border-borda-forte bg-superficie-2 px-3 text-xs font-semibold text-texto transition hover:bg-borda xl:flex"
           >
-            <Network size={16} className="text-bradesco-red" />
-            Arquitetura do Projeto
+            <Network size={16} aria-hidden="true" className="text-primaria" />
+            Arquitetura do projeto
           </button>
 
           <button
             type="button"
             aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
             aria-expanded={mobileOpen}
+            aria-controls="menu-movel"
             onClick={() => setMobileOpen((open) => !open)}
-            className="rounded-lg p-2 text-gray-700 hover:bg-gray-100 lg:hidden"
+            className="flex min-h-alvo min-w-[44px] items-center justify-center rounded-lg text-texto hover:bg-superficie-2 lg:hidden"
           >
-            {mobileOpen ? <X size={25} /> : <Menu size={25} />}
+            {mobileOpen ? <X size={25} aria-hidden="true" /> : <Menu size={25} aria-hidden="true" />}
           </button>
         </div>
       </div>
 
       {mobileOpen && (
-        <nav
-          aria-label="Menu móvel"
-          className="space-y-1 border-t border-gray-200 bg-white px-4 py-3 lg:hidden"
-        >
+        <nav id="menu-movel" aria-label="Menu móvel" className="space-y-1 border-t border-borda bg-superficie px-4 py-3 lg:hidden">
           {links.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              onClick={navigateTo}
-              className="block rounded-lg px-3 py-3 text-sm font-medium text-gray-800 hover:bg-red-50 hover:text-bradesco-red"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-lg px-3 py-3 text-sm font-medium text-texto hover:bg-primaria-clara hover:text-primaria"
             >
               {link.label}
             </a>
@@ -101,10 +83,10 @@ export default function Header({ onOpenArchitecture }) {
               setMobileOpen(false);
               onOpenArchitecture();
             }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold text-bradesco-red hover:bg-red-50"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold text-primaria hover:bg-primaria-clara"
           >
-            <ShieldCheck size={17} />
-            Ver Arquitetura do Projeto
+            <ShieldCheck size={17} aria-hidden="true" />
+            Arquitetura do projeto
           </button>
         </nav>
       )}

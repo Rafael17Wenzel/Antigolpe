@@ -2,12 +2,106 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens (canais RGB para permitir opacidade no Tailwind).
+ * Paleta padrão inspirada no wireframe acadêmico; alto contraste com paleta explícita
+ * (sem filtros CSS). Contrastes medidos em scripts/contraste.mjs.
+ */
 :root {
+  --cor-fundo: 244 245 247;
+  --cor-superficie: 255 255 255;
+  --cor-superficie-2: 249 250 251;
+  --cor-borda: 229 231 235;
+  --cor-borda-forte: 107 114 128;
+  --cor-texto: 31 41 55;
+  --cor-texto-suave: 75 85 99;
+  --cor-primaria: 204 0 0;
+  --cor-primaria-escura: 153 0 0;
+  --cor-primaria-clara: 255 236 236;
+  --cor-sobre-primaria: 255 255 255;
+  --cor-sucesso-fundo: 236 253 245;
+  --cor-sucesso-borda: 5 150 105;
+  --cor-sucesso-texto: 6 95 70;
+  --cor-sucesso-forte: 4 120 87;
+  --cor-alerta-fundo: 255 251 235;
+  --cor-alerta-borda: 217 119 6;
+  --cor-alerta-texto: 120 53 15;
+  --cor-perigo-fundo: 254 242 242;
+  --cor-perigo-borda: 220 38 38;
+  --cor-perigo-texto: 153 27 27;
+  --cor-info-fundo: 219 234 254;
+  --cor-info-texto: 29 78 216;
+  --cor-escuro: 17 24 39;
+  --cor-sobre-escuro: 249 250 251;
+  --cor-sobre-escuro-suave: 209 213 219;
+  --cor-heroi: 204 0 0;
+  --cor-heroi-fim: 127 29 29;
+  --cor-sobre-heroi: 255 255 255;
+  --cor-sobre-heroi-suave: 254 226 226;
+  --cor-sobre-forte: 255 255 255;
+  --cor-foco: 37 99 235;
+  /* Simulador de chat (visual inspirado em apps de mensagem, sem marca) */
+  --cor-chat-topo: 7 94 84;
+  --cor-chat-sobre-topo: 255 255 255;
+  --cor-chat-fundo: 236 229 221;
+  --cor-chat-enviada: 217 253 211;
+  --cor-chat-recebida: 255 255 255;
+
   font-family: 'Inter', sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+}
+
+/* Alto contraste: preto, branco e amarelo (paleta explícita, WCAG AAA para texto). */
+:root[data-tema='alto-contraste'] {
+  --cor-fundo: 0 0 0;
+  --cor-superficie: 0 0 0;
+  --cor-superficie-2: 18 18 18;
+  --cor-borda: 255 255 255;
+  --cor-borda-forte: 255 255 255;
+  --cor-texto: 255 255 255;
+  --cor-texto-suave: 235 235 235;
+  --cor-primaria: 255 230 0;
+  --cor-primaria-escura: 255 241 118;
+  --cor-primaria-clara: 18 18 18;
+  --cor-sobre-primaria: 0 0 0;
+  --cor-sucesso-fundo: 0 0 0;
+  --cor-sucesso-borda: 124 255 178;
+  --cor-sucesso-texto: 124 255 178;
+  --cor-sucesso-forte: 124 255 178;
+  --cor-alerta-fundo: 0 0 0;
+  --cor-alerta-borda: 255 230 0;
+  --cor-alerta-texto: 255 230 0;
+  --cor-perigo-fundo: 0 0 0;
+  --cor-perigo-borda: 255 138 138;
+  --cor-perigo-texto: 255 160 160;
+  --cor-info-fundo: 18 18 18;
+  --cor-info-texto: 150 190 255;
+  --cor-escuro: 0 0 0;
+  --cor-sobre-escuro: 255 255 255;
+  --cor-sobre-escuro-suave: 235 235 235;
+  --cor-heroi: 0 0 0;
+  --cor-heroi-fim: 0 0 0;
+  --cor-sobre-heroi: 255 255 255;
+  --cor-sobre-heroi-suave: 235 235 235;
+  --cor-sobre-forte: 0 0 0;
+  --cor-foco: 0 220 255;
+  --cor-chat-topo: 0 0 0;
+  --cor-chat-sobre-topo: 255 255 255;
+  --cor-chat-fundo: 0 0 0;
+  --cor-chat-enviada: 18 18 18;
+  --cor-chat-recebida: 0 0 0;
+
+  color-scheme: dark;
+}
+
+/* No alto contraste, toda superfície ganha contorno visível (fundo e cartões são pretos). */
+:root[data-tema='alto-contraste'] .contorno-ac {
+  outline: 1px solid rgb(var(--cor-borda));
+  outline-offset: -1px;
 }
 
 html {
@@ -19,6 +113,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: rgb(var(--cor-fundo));
+  color: rgb(var(--cor-texto));
 }
 
 button,
@@ -32,55 +128,37 @@ button {
   cursor: pointer;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 3px solid #2563eb;
+/* Foco sempre visível, com contraste nos dois temas (WCAG 2.4.7 / 2.4.13) */
+:focus-visible {
+  outline: 3px solid rgb(var(--cor-foco));
   outline-offset: 3px;
 }
 
 ::selection {
-  background: #cc0000;
-  color: white;
+  background: rgb(var(--cor-primaria));
+  color: rgb(var(--cor-sobre-primaria));
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cc0000;
-  border-radius: 4px;
-}
-
-.high-contrast {
-  filter: contrast(125%);
-  background-color: #000 !important;
-  color: #fff !important;
-}
-
-.high-contrast .hc-surface {
-  background-color: #121212 !important;
-  color: #fff !important;
-  border-color: #666 !important;
-}
-
-.high-contrast .hc-muted {
-  color: #e0e0e0 !important;
+.sr-only-focavel:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

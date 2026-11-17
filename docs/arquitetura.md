@@ -1,8 +1,11 @@
 # Diagrama de arquitetura — Antigolpe
 
-Visão do protótipo **como está hoje**: o frontend React consome uma API Spring Boot que serve
-dados mockados em memória. As setas tracejadas mostram onde o PostgreSQL entra quando o banco
-for desenvolvido (ver [MER](mer.md) e [DER](der.md)).
+> Protótipo acadêmico, **não oficial**. Atualizado na Sprint 10 (2026-11-17) para refletir o código entregue.
+
+O site (React) chama a API (Spring Boot), que consulta o PostgreSQL. A vaga é identificada **só pelo
+token**, conferido por HMAC no banco. O simulador de chat e o OCR (em amarelo) são **simulações**
+que rodam no navegador e usam a mesma API do validador. A Escola Virtual da Fundação Bradesco aparece
+apenas como destino de links de cursos: não há integração.
 
 ![Arquitetura](img/arquitetura.png)
 
@@ -11,82 +14,84 @@ for desenvolvido (ver [MER](mer.md) e [DER](der.md)).
 
 ```mermaid
 flowchart LR
-  user(["👤 Candidato<br/>(navegador)"])
+  user(["Candidato<br/>(navegador)"])
 
-  subgraph FE["Frontend · React 19 + Vite + Tailwind · :5173"]
+  subgraph FE["Frontend · React 19 + Vite + Tailwind · site estático"]
     direction TB
-    app["App.jsx<br/>estado global · toast · contraste"]
-    hero["Hero<br/>testes rápidos"]
-    panel["ValidationPanel<br/>validação · resultado"]
-    den["Formulário de denúncia<br/>(só no negativo)"]
-    courses["Courses<br/>cursos por resultado"]
-    faq["FAQ · Header · Footer<br/>TopBar · ArchitectureModal"]
-    api["api.js<br/>fetch · VITE_API_URL"]
-    hero -- "ref.runQuickTest()" --> panel
-    app --> hero & panel & faq
-    panel --> den & courses
-    panel --> api
-    den --> api
+    app["App.jsx<br/>rotas #validador · #/simulador<br/>tema · toast"]
+    panel["ValidationPanel<br/>TokenValidationForm · ValidationResult"]
+    neg["Somente se NÃO confirmado:<br/>ReportForm · cursos de acolhimento<br/>RegionalSuggestions"]
+    pos["Se confirmado:<br/>CourseRecommendations"]
+    chat["WhatsAppSimulator (simulação)<br/>extrairToken · ImageTokenReview"]
+    ocr["OCR experimental no navegador<br/>tesseract.js · public/ocr"]
+    api["api.js · fetch · VITE_API_URL"]
+    app --> panel & chat
+    panel --> pos & neg
+    chat --> ocr
+    panel & chat & neg --> api
   end
 
-  subgraph BE["Backend · Spring Boot 4 · Java 21 · :8080"]
+  subgraph BE["API · Spring Boot 4 · Java 21 · Docker"]
     direction TB
-    cors["WebConfig<br/>CORS /api/**"]
-    err["ApiExceptionHandler<br/>{ mensagem }"]
-    vc["VagaController<br/>GET /api/vagas<br/>GET /api/vagas/exemplos<br/>POST /api/vagas/validar"]
-    dc["DenunciaController<br/>POST /api/denuncias"]
-    vrepo[("VagaMockRepository<br/>vagas · tokens · link de golpe")]
-    crepo[("CursoMockRepository<br/>cursos · categorias · trilha")]
-    cors --> vc & dc
-    vc --> vrepo & crepo
-    vc -. erros .-> err
-    dc -. erros .-> err
+    filt["CabecalhosSegurancaFilter<br/>cabeçalhos · corpo ≤ 32 KB"]
+    lim["CORS (origens por env)<br/>LimiteRequisicoesInterceptor → 429"]
+    ctrl["Controllers<br/>vagas/validar · vagas/sugestoes · vagas/exemplos*<br/>denuncias · regioes · actuator/health"]
+    svc["Services<br/>ValidacaoService · TokenExtractor · TokenHasher (HMAC)<br/>DenunciaService · SugestaoService · CursoConsulta"]
+    obs["Metricas (Micrometer)<br/>logs com token mascarado"]
+    job["RetencaoJob<br/>90 / 180 dias"]
+    filt --> lim --> ctrl --> svc
+    svc -.-> obs
   end
 
-  db[("PostgreSQL<br/>(futuro · ver DER)")]
-  ev["Escola Virtual<br/>Fundação Bradesco<br/>ev.org.br"]
+  db[("PostgreSQL 16<br/>Flyway V1–V3")]
+  ev["Escola Virtual<br/>Fundação Bradesco<br/>(links de cursos)"]
 
   user --> FE
-  api -- "HTTP/JSON" --> cors
-  vrepo -. "substituir por<br/>repositórios JPA" .-> db
-  crepo -.-> db
-  dc -. "persistir denúncias" .-> db
-  courses -- "links externos" --> ev
+  FE -- "links de cursos" --> ev
+  api -- "HTTPS / JSON" --> filt
+  svc -- "JPA / JDBC" --> db
+  job --> db
 
-  classDef future stroke-dasharray: 5 5,fill:#f9fafb,color:#374151,stroke:#9ca3af;
   classDef ext fill:#ecfdf5,stroke:#059669,color:#065f46;
-  classDef red fill:#fff1f1,stroke:#cc0000,color:#7f1d1d;
-  class db future;
+  classDef sim fill:#fffbeb,stroke:#b45309,color:#78350f;
   class ev ext;
-  class vc,dc red;
+  class chat,ocr sim;
 ```
 
 </details>
+
+\* `GET /api/vagas/exemplos` só existe com dados de demonstração ativos (`DEMO_SEED=true` ou perfis `dev`/`h2`).
 
 ## Camadas
 
 | Camada | Tecnologia | Responsabilidade |
 |---|---|---|
-| Cliente | React 19 + Vite + Tailwind (porta 5173) | Interface, seletor de cargo, validação, denúncia (só no resultado negativo) e cursos (só após validar) |
-| Comunicação | `api.js` (fetch, JSON) | Chamadas HTTP para a API; URL em `VITE_API_URL` |
-| API | Spring Boot 4 / Java 21 (porta 8080) | Endpoints REST, CORS, tratamento de erros `{ mensagem }` |
-| Dados (hoje) | `VagaMockRepository`, `CursoMockRepository` | Vagas, tokens, cursos, categorias e trilha de segurança em memória |
-| Dados (futuro) | PostgreSQL | Mesmo conteúdo dos mocks + persistência das denúncias |
-| Externo | Escola Virtual da Fundação Bradesco | Links do catálogo de cursos |
+| Cliente | React 19, Vite, Tailwind (site estático) | Validador (campo único), resultado, denúncia e sugestões (só no não confirmado), cursos, alto contraste, simulador de chat com OCR experimental |
+| Comunicação | `api.js` (fetch/JSON), `VITE_API_URL` | Erros no formato `{ mensagem }`; 0/503 nunca viram resultado negativo |
+| Borda da API | `CabecalhosSegurancaFilter`, CORS, `LimiteRequisicoesInterceptor` | Cabeçalhos de segurança, corpo ≤ 32 KB, origens permitidas, 429 por cliente |
+| API | Controllers → Services → Repositories (Spring Boot 4, Java 21) | Regras de validação, denúncia, sugestões, cursos; DTOs separados das entidades |
+| Dados | PostgreSQL 16 + Flyway (V1–V3); H2 só em testes/demonstração | Ver [MER](mer.md) e [DER](der.md) |
+| Operação | Actuator (`/actuator/health`), Micrometer, `RetencaoJob` | Health check, métricas sem dados sensíveis, retenção 90/180 dias |
+| Deploy (preparado) | `render.yaml`, `backend/Dockerfile` | API Docker, site estático, PostgreSQL gerenciado — ver [DEPLOY](DEPLOY.md) |
 
 ## Endpoints
 
-| Método | Rota | Controller | Uso no front |
-|---|---|---|---|
-| GET | `/api/vagas` | VagaController | Preenche o seletor de cargo |
-| GET | `/api/vagas/exemplos` | VagaController | Botões "Simular Vaga Válida" e "Simular Golpe / Phishing" |
-| POST | `/api/vagas/validar` | VagaController | Valida token/link e devolve os cursos recomendados |
-| POST | `/api/denuncias` | DenunciaController | Envia a denúncia simulada e devolve o protocolo |
+| Método | Rota | Uso |
+|---|---|---|
+| POST | `/api/vagas/validar` | Validação de token, link ou texto (link nunca acessado) |
+| POST | `/api/denuncias` | Denúncia opcional (protocolo `AG-…`), não enviada a terceiros |
+| GET | `/api/vagas/sugestoes?uf=` | Até 3 vagas publicadas (UF escolhida → remotas) |
+| GET | `/api/regioes` | 27 UFs para escolha manual |
+| GET | `/api/vagas/exemplos` | Exemplos dos testes rápidos (só demonstração) |
+| GET | `/actuator/health` | Health check |
+
+Contrato completo: [`contracts/api.yaml`](../contracts/api.yaml).
 
 ## Fluxo de uma validação
 
-1. O candidato escolhe o cargo e informa o token ou link.
-2. `ValidationPanel` chama `POST /api/vagas/validar`.
-3. `VagaController` busca a vaga e o dono do token em `VagaMockRepository` e monta os cursos com `CursoMockRepository`.
-4. **Válido:** o front mostra os cursos do cargo abaixo do validador, sem rolar a tela.
-5. **Não confirmado:** o front mostra a denúncia e os cursos de acolhimento lado a lado e rola até eles. A denúncia vai para `POST /api/denuncias`.
+1. A pessoa cola o token, o link ou a mensagem (ou, no simulador, anexa um print lido por OCR no navegador e revisa o token).
+2. `POST /api/vagas/validar` → `TokenExtractor` localiza o candidato (`BRD-…`) só por texto.
+3. `TokenHasher` calcula o HMAC e o banco é consultado pelo hash. Confirma somente se o token estiver ativo, vigente, a vaga publicada e o prefixo regional coincidir.
+4. A validação é registrada sem o token (`validacao`), e as métricas são incrementadas.
+5. **Confirmado:** cargo, região e cursos da vaga, com aviso de que isso não garante a autenticidade da mensagem.
+6. **Não confirmado:** a mesma resposta para não encontrado, expirado, revogado e vaga encerrada (anti-enumeração), nunca "golpe"; o site mostra orientação, denúncia opcional, cursos de segurança e sugestões regionais.

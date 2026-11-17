@@ -4,18 +4,28 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copiar-ocr.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copiar-ocr.mjs",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "contraste": "node scripts/contraste.mjs",
+    "servir:prod": "node scripts/servir-com-headers.mjs 4173"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "lucide-react": "^0.468.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",

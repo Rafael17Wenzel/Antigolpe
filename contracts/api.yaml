@@ -1,0 +1,302 @@
+openapi: 3.0.3
+info:
+  title: Antigolpe API
+  version: 0.6.0
+  description: |
+    Protótipo acadêmico, não oficial. Não é canal oficial do Bradesco.
+    Confirmado = correspondência em cadastro, não prova de autenticidade da mensagem.
+
+    **Este arquivo descreve o contrato IMPLEMENTADO.** O que ainda falta para o
+    contrato alvo está anotado em `x-alvo`, com a sprint prevista.
+
+    Histórico:
+    - v0.1.0 (Sprint 01): validação exigia `vaga`; status `VALIDO_DEMONSTRACAO`.
+    - v0.2.0 (Sprint 02): só `tokenOuLink`; a vaga é identificada pelo token no backend;
+      status `CONFIRMADO`/`NAO_CONFIRMADO`; resposta com `vaga` e `idValidacao`;
+      token deixa de ser devolvido; `GET /api/vagas` removido; `503` para falha técnica.
+    - v0.3.0 (Sprint 03): dados no PostgreSQL; `vaga.uf`, `vaga.cidade` e `vaga.fonteCadastrada`
+      preenchidos pelo banco; token no formato `BRD-BR-<UF|RM>-<16>`; `GET /api/vagas/exemplos`
+      só existe com dados de demonstração ativos (`app.demo.seed=true`).
+    - v0.4.0 (Sprint 05): cada validação é registrada (sem o token); `idValidacao` é a chave do registro.
+      `POST /api/denuncias` persiste, responde `201`, exige `aceiteAviso` e aceita `idValidacao` opcional.
+    - v0.5.0 (Sprint 06): `GET /api/vagas/sugestoes` (UF escolhida pelo usuário, fallback remoto, até 3,
+      sem links) e `GET /api/regioes`.
+    - v0.6.0 (Sprint 08): `429` com `Retry-After` (limite por cliente) em validação, denúncia e sugestões;
+      `413` para corpo acima de 32 KB; cabeçalhos de segurança em todas as respostas; tokens completos
+      em `urlSuspeita`/`descricao` são guardados mascarados.
+
+    Cabeçalhos em todas as respostas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+    `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`,
+    `Cache-Control: no-store` e, em HTTPS, `Strict-Transport-Security`.
+servers:
+  - url: http://localhost:8080
+    description: Desenvolvimento local
+paths:
+  /actuator/health:
+    get:
+      summary: Health check (Actuator)
+      description: Único endpoint do Actuator exposto. Sem detalhes internos.
+      responses:
+        '200':
+          description: Aplicação no ar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, example: UP }
+
+  /api/vagas/exemplos:
+    get:
+      summary: Valores de demonstração dos botões de teste rápido
+      description: Só existe com dados de demonstração ativos (perfis dev e h2). Em produção responde 404.
+      x-nota: >-
+        Revisado na Sprint 08 (D041): devolve apenas tokens FICTÍCIOS e só com dados de demonstração
+        ativos; desligado em produção.
+      responses:
+        '200':
+          description: Exemplo válido e exemplo de golpe
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exemplos' }
+
+  /api/regioes:
+    get:
+      summary: Lista as 27 UFs para seleção manual de região
+      responses:
+        '200':
+          description: UFs ordenadas pelo nome
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [uf, nome]
+                  properties:
+                    uf: { type: string, example: SP }
+                    nome: { type: string, example: São Paulo }
+
+  /api/vagas/sugestoes:
+    get:
+      summary: Sugere até 3 vagas publicadas e com fonte cadastrada (opcional, após não confirmação)
+      description: |
+        A região vem somente da escolha do usuário (sem geolocalização e sem usar o prefixo do token).
+        Ordem: vagas da UF (mesma cidade primeiro) e, para completar, vagas remotas. Sem UF: só remotas.
+        Encerradas e rascunhos nunca aparecem. A resposta não contém links.
+      parameters:
+        - { name: uf, in: query, required: false, schema: { type: string, pattern: '^[A-Za-z]{2}$' } }
+        - { name: cidade, in: query, required: false, schema: { type: string, maxLength: 100 } }
+      responses:
+        '200':
+          description: Sugestões (lista pode ser vazia)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SugestoesResponse' }
+        '400':
+          description: UF malformada ou desconhecida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '429':
+          $ref: '#/components/responses/LimiteExcedido'
+        '503':
+          description: Indisponível (não afeta validação nem denúncia)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /api/vagas/validar:
+    post:
+      summary: Valida token ou link; a vaga é identificada pelo token no backend
+      description: |
+        O texto é apenas analisado (o link nunca é acessado). Token desconhecido,
+        expirado ou revogado recebem a mesma resposta pública (contra enumeração).
+        Ausência de token ou não confirmação nunca é declarada como golpe.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ValidacaoRequest' }
+      responses:
+        '200':
+          description: Resultado da consulta; status semântico no corpo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidacaoResponse' }
+        '400':
+          description: tokenOuLink ausente, vazio, maior que 2048 caracteres ou corpo inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '413':
+          $ref: '#/components/responses/CorpoGrande'
+        '429':
+          $ref: '#/components/responses/LimiteExcedido'
+        '503':
+          description: Consulta indisponível. Não é resultado negativo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /api/denuncias:
+    post:
+      summary: Registra denúncia (persistida no protótipo; não é enviada a terceiros)
+      description: |
+        Aceita ofertas não cadastradas: `idValidacao` é opcional e, se não existir, é ignorado.
+        Dados guardados por até 180 dias (configurável). Não há rota pública de consulta.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DenunciaRequest' }
+      responses:
+        '201':
+          description: Denúncia registrada, com protocolo opaco
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DenunciaResponse' }
+        '400':
+          description: Campo obrigatório ausente, e-mail inválido, texto longo demais ou aviso não aceito
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '413':
+          $ref: '#/components/responses/CorpoGrande'
+        '429':
+          $ref: '#/components/responses/LimiteExcedido'
+        '503':
+          description: Não registrada por falha técnica (nunca apresentar como sucesso)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+components:
+  responses:
+    LimiteExcedido:
+      description: |
+        Muitas requisições do mesmo cliente na janela (padrões: validação 20/min, denúncia 10/h,
+        sugestões 30/min; configuráveis). Não é resultado negativo.
+      headers:
+        Retry-After:
+          description: Segundos até liberar
+          schema: { type: integer, example: 42 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    CorpoGrande:
+      description: Corpo declarado acima de 32 KB (recusado antes de ser lido)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+  schemas:
+    Erro:
+      type: object
+      required: [mensagem]
+      description: Formato único de erro. Nunca traz stack trace nem valores enviados.
+      properties:
+        mensagem: { type: string, example: Informe a vaga e o token ou link. }
+
+    Curso:
+      type: object
+      required: [id, titulo, descricao, categoria]
+      properties:
+        id: { type: string, example: java-basico }
+        titulo: { type: string }
+        descricao: { type: string }
+        categoria: { type: string, example: Programação }
+
+    VagaResumo:
+      type: object
+      required: [id, cargo]
+      properties:
+        id: { type: string, example: recursos-humanos, description: Identificador público (slug) }
+        cargo: { type: string, example: Analista de Recursos Humanos }
+        uf: { type: string, nullable: true, minLength: 2, maxLength: 2, description: Nula para vaga remota sem UF }
+        cidade: { type: string, nullable: true }
+        fonteCadastrada: { type: string, nullable: true }
+
+    Exemplo:
+      type: object
+      required: [tokenOuLink]
+      properties:
+        tokenOuLink: { type: string }
+
+    Exemplos:
+      type: object
+      required: [valido, golpe]
+      properties:
+        valido: { $ref: '#/components/schemas/Exemplo' }
+        golpe: { $ref: '#/components/schemas/Exemplo' }
+
+    ValidacaoRequest:
+      type: object
+      required: [tokenOuLink]
+      properties:
+        tokenOuLink:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: Token, link ou trecho da mensagem. Campos extras (como o antigo `vaga`) são ignorados.
+
+    ValidacaoResponse:
+      type: object
+      required: [status, mensagem, idValidacao, cursosRecomendados]
+      properties:
+        status:
+          type: string
+          enum: [CONFIRMADO, NAO_CONFIRMADO]
+          description: Detalhes como expirado/revogado/não encontrado ficam internos para evitar enumeração.
+        mensagem: { type: string }
+        vaga:
+          nullable: true
+          allOf: [ { $ref: '#/components/schemas/VagaResumo' } ]
+          description: Presente apenas quando CONFIRMADO.
+        idValidacao:
+          type: string
+          description: Identificador público opaco (UUID) do registro da consulta, sem o token.
+        cursosRecomendados:
+          type: array
+          description: 'CONFIRMADO: cursos do cargo. NAO_CONFIRMADO: trilha de segurança.'
+          items: { $ref: '#/components/schemas/Curso' }
+
+    SugestoesResponse:
+      type: object
+      required: [criterio, vagas, aviso]
+      properties:
+        uf: { type: string, nullable: true }
+        criterio: { type: string }
+        aviso: { type: string }
+        vagas:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            required: [id, cargo, modalidade, ficticia]
+            properties:
+              id: { type: string }
+              cargo: { type: string }
+              modalidade: { type: string, enum: [PRESENCIAL, HIBRIDA, REMOTA] }
+              uf: { type: string, nullable: true }
+              cidade: { type: string, nullable: true }
+              fonteCadastrada: { type: string }
+              ficticia: { type: boolean, description: Vaga fictícia de demonstração (exibir rótulo) }
+
+    DenunciaRequest:
+      type: object
+      required: [urlSuspeita, descricao, aceiteAviso]
+      properties:
+        urlSuspeita: { type: string, minLength: 1, maxLength: 2048 }
+        emailContato: { type: string, format: email, maxLength: 254, nullable: true }
+        descricao: { type: string, minLength: 1, maxLength: 2000 }
+        idValidacao: { type: string, nullable: true, description: Referência opcional à consulta (UUID) }
+        aceiteAviso: { type: boolean, enum: [true], description: Leitura do aviso de privacidade }
+
+    DenunciaResponse:
+      type: object
+      required: [recebida, protocolo, mensagem]
+      properties:
+        recebida: { type: boolean }
+        protocolo: { type: string, example: AG-7K2M9Q4XH3, pattern: '^AG-[0-9A-Z]{10}$' }
+        mensagem: { type: string }

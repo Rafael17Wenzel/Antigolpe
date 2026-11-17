@@ -6,7 +6,6 @@ public record ExemplosResponse(
     Exemplo golpe
 ) {
     public record Exemplo(
-        String vaga,
         String tokenOuLink
     ) {}
 }

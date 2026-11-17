@@ -1,8 +1,11 @@
-import { ShieldCheck, CheckCircle2, TriangleAlert } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, TriangleAlert } from 'lucide-react';
 
 export default function Hero({ onQuickTest }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-r from-bradesco-red via-red-700 to-red-900 px-4 py-12 text-white sm:px-6 lg:px-8">
+    <section
+      aria-labelledby="titulo-principal"
+      className="contorno-ac relative overflow-hidden bg-gradient-to-r from-heroi to-heroi-fim px-4 py-12 text-heroi-sobre sm:px-6 lg:px-8"
+    >
       <ShieldCheck
         aria-hidden="true"
         className="pointer-events-none absolute -right-8 -top-8 h-72 w-72 opacity-10"
@@ -11,43 +14,41 @@ export default function Hero({ onQuickTest }) {
 
       <div className="relative z-10 mx-auto max-w-7xl">
         <div className="max-w-3xl">
-          <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-            <ShieldCheck size={15} />
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-heroi-sobre/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
+            <ShieldCheck size={15} aria-hidden="true" />
             Segurança e prevenção a fraudes
-          </span>
+          </p>
 
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+          <h1 id="titulo-principal" className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
             Validação de Vagas e Transparência
           </h1>
 
-          <p className="mt-4 max-w-2xl text-base font-light text-red-100 sm:text-lg">
-            Recebeu uma proposta de emprego? Utilize este protótipo
-            acadêmico para aprender a identificar sinais de fraude e
-            verificar exemplos de tokens e links.
+          <p className="mt-4 max-w-2xl text-base text-heroi-sobre-suave sm:text-lg">
+            Recebeu uma proposta de emprego? Use este protótipo acadêmico para aprender a
+            identificar sinais de fraude e consultar tokens e links em um cadastro de demonstração.
           </p>
 
-          <p className="mt-3 text-xs text-red-100">
-            Demonstração não oficial. Não insira senhas, documentos ou
-            dados bancários.
+          <p className="mt-3 text-sm font-semibold text-heroi-sobre">
+            Protótipo acadêmico, não oficial. Não insira senhas, documentos ou dados bancários.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => onQuickTest('valid')}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-xs font-bold text-bradesco-red shadow-md transition hover:bg-red-50 sm:text-sm"
+              className="flex min-h-alvo items-center gap-2 rounded-lg bg-superficie px-4 text-sm font-bold text-primaria shadow-md transition hover:bg-primaria-clara"
             >
-              <CheckCircle2 size={18} className="text-emerald-600" />
-              Simular Vaga Válida
+              <CheckCircle2 size={18} aria-hidden="true" />
+              Simular vaga cadastrada
             </button>
 
             <button
               type="button"
               onClick={() => onQuickTest('phishing')}
-              className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-black sm:text-sm"
+              className="flex min-h-alvo items-center gap-2 rounded-lg border border-heroi-sobre bg-escuro px-4 text-sm font-bold text-escuro-sobre shadow-md transition hover:opacity-90"
             >
-              <TriangleAlert size={18} className="text-amber-400" />
-              Simular Golpe / Phishing
+              <TriangleAlert size={18} aria-hidden="true" />
+              Simular golpe / phishing
             </button>
           </div>
         </div>

@@ -15,9 +15,11 @@ async function request(endpoint, { method = "GET", data } = {}) {
       body: data !== undefined ? JSON.stringify(data) : undefined
     });
   } catch {
-    throw new Error(
-      "Não foi possível conectar à API. Verifique se o backend Spring Boot está executando."
+    const error = new Error(
+      "Não foi possível conectar ao serviço agora. Isso não indica golpe; tente novamente em instantes."
     );
+    error.status = 0;
+    throw error;
   }
 
   const text = await response.text();
@@ -38,29 +40,18 @@ async function request(endpoint, { method = "GET", data } = {}) {
       result.message ||
       `Erro na requisição (HTTP ${response.status}).`;
 
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return result;
 }
 
 /**
- * GET /api/vagas
- *
- * Retorno: [{ id: string, cargo: string, cursos: Curso[] }]
- */
-export function listarVagas() {
-  return request("/api/vagas");
-}
-
-/**
  * GET /api/vagas/exemplos
  *
- * Retorno:
- * {
- *   valido: { vaga: string, tokenOuLink: string },
- *   golpe:  { vaga: string, tokenOuLink: string }
- * }
+ * Retorno: { valido: { tokenOuLink }, golpe: { tokenOuLink } }
  */
 export function obterExemplos() {
   return request("/api/vagas/exemplos");
@@ -69,19 +60,15 @@ export function obterExemplos() {
 /**
  * POST /api/vagas/validar
  *
- * ValidacaoRequest:
- * {
- *   vaga: string,        // id da vaga (GET /api/vagas)
- *   tokenOuLink: string
- * }
- *
- * Retorno inclui cursosRecomendados: cursos do cargo (válido) ou
- * trilha de segurança + cursos do cargo (não confirmado).
+ * Requisição: { tokenOuLink: string }  (a vaga é identificada pelo token no backend)
+ * Resposta: { status: "CONFIRMADO" | "NAO_CONFIRMADO", mensagem, vaga | null,
+ *             idValidacao, cursosRecomendados }
+ * 503: consulta indisponível (não é resultado negativo).
  */
-export function validarVaga(vaga, tokenOuLink) {
+export function validarVaga(tokenOuLink) {
   return request("/api/vagas/validar", {
     method: "POST",
-    data: { vaga, tokenOuLink }
+    data: { tokenOuLink }
   });
 }
 
@@ -91,21 +78,46 @@ export function validarVaga(vaga, tokenOuLink) {
  * DenunciaRequest:
  * {
  *   urlSuspeita: string,
- *   emailContato: string,
- *   descricao: string
+ *   emailContato?: string,
+ *   descricao: string,
+ *   idValidacao?: string,  // referência opcional à consulta
+ *   aceiteAviso: boolean   // leitura do aviso de privacidade (obrigatória)
  * }
+ *
+ * 201: { recebida, protocolo, mensagem }. 503: não registrada (nunca mostrar como sucesso).
  */
 export function registrarDenuncia({
   urlSuspeita,
   emailContato,
-  descricao
+  descricao,
+  idValidacao,
+  aceiteAviso
 }) {
   return request("/api/denuncias", {
     method: "POST",
     data: {
       urlSuspeita,
       emailContato: emailContato || null,
-      descricao
+      descricao,
+      idValidacao: idValidacao || null,
+      aceiteAviso: Boolean(aceiteAviso)
     }
   });
+}
+
+/**
+ * GET /api/regioes → [{ uf, nome }]  (seleção manual de região; sem geolocalização)
+ */
+export function listarRegioes() {
+  return request("/api/regioes");
+}
+
+/**
+ * GET /api/vagas/sugestoes?uf=XX
+ * Até 3 vagas publicadas e com fonte cadastrada; sem UF, somente remotas.
+ * Resposta: { uf, criterio, vagas: [{ id, cargo, modalidade, uf, cidade, fonteCadastrada, ficticia }], aviso }
+ */
+export function sugerirVagas(uf) {
+  const query = uf ? `?uf=${encodeURIComponent(uf)}` : "";
+  return request(`/api/vagas/sugestoes${query}`);
 }

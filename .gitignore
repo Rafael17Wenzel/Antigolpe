@@ -1,1 +1,6 @@
-node_modeules/
+node_modules/
+
+# Variáveis de ambiente (use os .env.example como modelo)
+.env
+.env.*
+!.env.example
