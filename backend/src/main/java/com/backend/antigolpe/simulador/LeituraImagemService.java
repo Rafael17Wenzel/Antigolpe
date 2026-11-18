@@ -44,6 +44,7 @@ public class LeituraImagemService {
         }
         if (!gemini.configurado()) {
             metricas.leituraIa("nao_configurado");
+            log.warn("Leitura por IA indisponível: GEMINI_API_KEY não definida no backend.");
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, MSG_INDISPONIVEL);
         }
         String texto;

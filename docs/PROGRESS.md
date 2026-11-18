@@ -547,3 +547,10 @@ Para cada sprint preencher:
 - **Pendências e riscos:**
   - Cota gratuita do Gemini: o Google pode guardar e revisar as imagens; preferir cota paga se houver dados reais.
   - Custo e limites da chave dependem do plano do usuário no Google AI Studio.
+
+### Correções (2026-11-17, após a Sprint 12)
+
+- Simulador: "Quero denunciar (opcional)" agora rola até o formulário de denúncia e põe o foco na descrição, inclusive em cliques repetidos (respeita movimento reduzido).
+- Área do RH: "Sair" (no cabeçalho e na área) leva à página principal, não ao login. Causa: a proteção da rota `#/admin` redirecionava ao login antes da troca de rota; agora a rota muda no mesmo render em que a sessão é encerrada.
+- Backend: mensagens de diagnóstico do Gemini no console (configurado/não configurado; código e status do erro do Google, sem a chave).
+- Testes: +1 em `chat.spec.js`, +1 e verificação extra em `rh.spec.js`. Playwright → **67/67**.

@@ -58,6 +58,17 @@ export default function WhatsAppSimulator({ onToast }) {
   const arquivoRef = useRef(null);
   const fimRef = useRef(null);
   const urlsRef = useRef([]);
+  const denunciaRef = useRef(null);
+  const descricaoDenunciaRef = useRef(null);
+
+  // Ao pedir para denunciar: leva a tela até o formulário e põe o foco na descrição.
+  // Roda a cada clique (o objeto muda), mesmo que o formulário já esteja aberto.
+  useEffect(() => {
+    if (!denuncia) return;
+    const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    denunciaRef.current?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "start" });
+    descricaoDenunciaRef.current?.focus({ preventScroll: true });
+  }, [denuncia]);
 
   useEffect(() => {
     tituloRef.current?.focus();
@@ -445,11 +456,12 @@ export default function WhatsAppSimulator({ onToast }) {
       </div>
 
       {denuncia && (
-        <div className="mx-auto mt-6 max-w-2xl">
+        <div ref={denunciaRef} className="mx-auto mt-6 max-w-2xl scroll-mt-28">
           <ReportForm
             key={denuncia.chave}
             urlInicial={denuncia.url}
             idValidacao={denuncia.idValidacao}
+            descricaoRef={descricaoDenunciaRef}
             onToast={onToast}
           />
         </div>

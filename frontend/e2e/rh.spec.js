@@ -18,6 +18,15 @@ async function semViolacoes(page, contexto) {
 }
 
 test.describe('Área do RH (Sprint 11)', () => {
+  test('Sair do cabeçalho também volta para a página principal', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await entrar(page);
+    await expect(page.getByRole('heading', { name: 'Gestão de vagas — RH' })).toBeVisible();
+    await page.getByRole('banner').getByRole('button', { name: 'Sair' }).click();
+    await expect(page.locator('#validador')).toBeVisible();
+    await expect(page).not.toHaveURL(/#\/(login|admin)/);
+  });
+
   test('rota protegida: sem login vai para a tela de login', async ({ page }) => {
     await page.goto('/#/admin');
     await expect(page).toHaveURL(/#\/login$/);
@@ -44,6 +53,10 @@ test.describe('Área do RH (Sprint 11)', () => {
 
     await page.getByRole('main').getByRole('button', { name: 'Sair' }).click();
     await expect(page.getByRole('link', { name: 'Entrar' })).toBeVisible();
+    // Sair vai para a página principal, não para o login
+    await expect(page).not.toHaveURL(/#\/login/);
+    await expect(page.locator('#validador')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Entrar na área do RH' })).toHaveCount(0);
     await page.goto('/#/admin');
     await expect(page).toHaveURL(/#\/login$/);
   });

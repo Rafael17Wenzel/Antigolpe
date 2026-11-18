@@ -88,6 +88,26 @@ test.describe('Simulador de chat (Sprint 07)', () => {
     await expect(page.locator('#aceiteAviso')).toBeVisible();
   });
 
+  test('"Quero denunciar" rola até o formulário e foca a descrição (também no 2º clique)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await abrirSimulador(page);
+    await enviarTexto(page, TOKENS.revogado);
+    await page.getByRole('button', { name: 'Consultar este token' }).click();
+    const botao = page.locator(LOG).getByRole('button', { name: 'Quero denunciar (opcional)' });
+    await botao.click();
+
+    const descricao = page.locator('#descricao');
+    await expect(descricao).toBeFocused();
+    await expect(descricao).toBeInViewport();
+
+    // Volta para o topo e clica de novo: rola outra vez
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(descricao).not.toBeInViewport();
+    await botao.click();
+    await expect(descricao).toBeInViewport();
+    await expect(descricao).toBeFocused();
+  });
+
   test('cancelar não consulta nada', async ({ page }) => {
     await abrirSimulador(page);
     let consultas = 0;

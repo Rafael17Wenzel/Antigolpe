@@ -1,5 +1,7 @@
 package com.backend.antigolpe.simulador;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -22,6 +24,8 @@ import java.util.Map;
  */
 @Component
 public class GeminiCliente {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiCliente.class);
 
     static final String INSTRUCAO = """
         Você recebe um print de uma mensagem sobre uma vaga de emprego. Sua única tarefa é transcrever
@@ -47,6 +51,12 @@ public class GeminiCliente {
         this.urlBase = urlBase.replaceAll("/+$", "");
         this.timeout = Duration.ofSeconds(timeoutSegundos);
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        // Diagnóstico no início (nunca mostra a chave)
+        if (configurado()) {
+            log.info("Leitura por IA: Gemini configurado (modelo {}).", modelo);
+        } else {
+            log.warn("Leitura por IA: GEMINI_API_KEY não definida; o simulador usará a leitura local.");
+        }
     }
 
     public boolean configurado() {
@@ -74,7 +84,8 @@ public class GeminiCliente {
                 .build();
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (resp.statusCode() != 200) {
-                throw new GeminiIndisponivelException("HTTP " + resp.statusCode());
+                // Só o código e o status do Google (ex.: 401 UNAUTHENTICATED, 404 NOT_FOUND), nunca a chave
+                throw new GeminiIndisponivelException("HTTP " + resp.statusCode() + " " + statusDoErro(resp.body()));
             }
             JsonNode partes = json.readTree(resp.body()).path("candidates").path(0).path("content").path("parts");
             StringBuilder texto = new StringBuilder();
@@ -88,6 +99,18 @@ public class GeminiCliente {
         } catch (Exception e) {
             // Só a classe da falha: nunca a chave, a imagem ou a resposta
             throw new GeminiIndisponivelException(e.getClass().getSimpleName());
+        }
+    }
+
+    private String statusDoErro(String corpo) {
+        try {
+            JsonNode erro = json.readTree(corpo).path("error");
+            String status = erro.path("status").asString("");
+            String motivo = erro.path("details").path(0).path("reason").asString("");
+            String texto = (status + " " + motivo).trim();
+            return texto.replaceAll("[^A-Z_ ]", "");
+        } catch (Exception e) {
+            return "";
         }
     }
 

@@ -62,9 +62,13 @@ export default function App() {
     [entrar],
   );
 
+  // Sair leva à página principal. A rota muda no mesmo render em que a sessão some;
+  // senão a proteção de /admin (sem sessão → login) agiria antes do hashchange.
   const aoSair = useCallback(() => {
+    setRota('inicio');
     sair();
     window.location.hash = '#topo';
+    window.scrollTo({ top: 0 });
     setToast({ message: 'Você saiu da área do RH.', type: 'success' });
   }, [sair]);
 
