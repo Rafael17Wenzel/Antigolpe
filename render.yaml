@@ -32,6 +32,12 @@ services:
       # URL do site estático, informada no painel na criação (ex.: https://antigolpe-web.onrender.com)
       - key: CORS_ALLOWED_ORIGINS
         sync: false
+      # Chave do Google Gemini (leitura de prints no simulador). Informar no painel; nunca no git.
+      # Sem ela, o simulador usa a leitura local (OCR no navegador).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODELO
+        value: gemini-3.5-flash-lite
       # Endereço real do cliente atrás do proxy do Render (limite de requisições)
       - key: FORWARD_HEADERS_STRATEGY
         value: native

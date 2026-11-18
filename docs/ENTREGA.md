@@ -20,7 +20,8 @@
 | Sugestões regionais | **Real sobre dados fictícios** | Até 3 vagas publicadas da UF escolhida pela pessoa, depois remotas; sem geolocalização |
 | Alto contraste e acessibilidade | **Real** | Tema próprio, teclado, foco, leitor de tela (rótulos/regiões vivas), movimento reduzido; axe sem violações A/AA |
 | Simulador de chat | **Simulação visual** | Não é o WhatsApp; nada é enviado a aplicativos de mensagem |
-| Leitura de print (OCR) | **Experimental** | `tesseract.js` no navegador; a imagem não sai do dispositivo; o token lido sempre passa por revisão humana |
+| Leitura de print por IA | **Real, integração com o Google Gemini** (com a chave do projeto) | Só com aceite da pessoa; via backend (`GEMINI_API_KEY`); a IA apenas sugere o token, que passa por revisão humana e pelo cadastro. Não é integração oficial nem do Bradesco |
+| Leitura de print local (OCR) | **Experimental / fallback** | `tesseract.js` no navegador, usada sem o aceite ou quando a IA falha; a imagem não sai do dispositivo |
 | Limite de requisições, cabeçalhos, logs mascarados, métricas | **Real** | 429 por cliente; tokens mascarados em logs; contadores sem dados pessoais |
 | Deploy no Render | **Preparado, não executado** | `render.yaml`, Dockerfile e guia prontos; criar os recursos exige aprovação |
 | CI no GitHub | **Preparado, não executado** | `.github/workflows/ci.yml`; os mesmos comandos foram rodados localmente |
@@ -31,6 +32,7 @@
 - **Área do RH com um único usuário fixo (`root`/`root`)** e token em texto puro no banco: aceitáveis só em demonstração (D056, D057). Denúncias são somente leitura.
 - **Limite de requisições em memória:** vale por instância (suficiente para uma instância).
 - **OCR experimental:** falha com fonte pequena, fundo colorido ou compressão forte; primeiro uso baixa ~10 MB.
+- **Gemini:** depende da chave, da cota e da rede; na cota gratuita o Google pode guardar e revisar as imagens enviadas (termos do Gemini API). O teste automático usa respostas simuladas: a chamada real ao Google não foi testada no ambiente do assistente (sem acesso de rede ao serviço).
 - **Plano gratuito do Render:** API hiberna após 15 min sem uso; banco gratuito expira em 30 dias e não tem backup (`docs/DEPLOY.md`).
 - **Verificações manuais pendentes:** leitor de tela real (NVDA/VoiceOver), zoom de 200% e dispositivos móveis reais (`docs/A11Y_EVIDENCIAS.md`).
 - **Dependências de build:** alerta de `picomatch` (ReDoS) em Tailwind 3/Vite, sem impacto no código servido (D048).

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import ReportForm from "../components/ReportForm";
-import { validarVaga } from "../api";
+import { lerImagemComIa, validarVaga } from "../api";
 import ImageTokenReview from "./ImageTokenReview";
 import extrairToken from "./extrairToken";
 import { lerTextoDaImagem } from "./ocr";
@@ -34,10 +34,14 @@ function hora() {
   });
 }
 
+export const MSG_IA_COM_PROBLEMAS =
+  "O serviço de leitura por IA está com problemas no momento. Vou usar a leitura local (experimental).";
+
 /**
- * SIMULAÇÃO visual de um chat de mensagens. Não há integração com o WhatsApp
- * nem com outros serviços: texto e imagem ficam no navegador, e a consulta usa
- * a mesma API de validação do site.
+ * SIMULAÇÃO visual de um chat de mensagens. Não há integração com o WhatsApp.
+ * Prints: com o aceite da pessoa, o token é lido pelo Google Gemini (via backend, D061);
+ * sem aceite ou se a IA falhar, a leitura é local (OCR no navegador). Em todos os casos
+ * o token passa por revisão humana e a confirmação vem da mesma API do validador.
  */
 export default function WhatsAppSimulator({ onToast }) {
   const [mensagens, setMensagens] = useState([
@@ -45,6 +49,7 @@ export default function WhatsAppSimulator({ onToast }) {
   ]);
   const [texto, setTexto] = useState("");
   const [anexo, setAnexo] = useState(null);
+  const [consentimentoIa, setConsentimentoIa] = useState(false);
   const [erroEntrada, setErroEntrada] = useState(null);
   const [processando, setProcessando] = useState(false);
   const [denuncia, setDenuncia] = useState(null);
@@ -116,8 +121,32 @@ export default function WhatsAppSimulator({ onToast }) {
 
     let candidato = extrairToken(conteudo);
     let origem = "texto";
+    const usarIa = consentimentoIa;
+    setConsentimentoIa(false);
+    let lerLocal = Boolean(!candidato && imagem);
 
-    if (!candidato && imagem) {
+    if (!candidato && imagem && usarIa) {
+      const avisoIa = adicionar({
+        autor: "assistente",
+        tipo: "texto",
+        texto: "Lendo a imagem com IA (Google Gemini)…",
+      });
+      try {
+        const r = await lerImagemComIa(imagem.arquivo);
+        candidato = r.token || null;
+        origem = "ia";
+        lerLocal = false;
+        atualizar(avisoIa, {
+          texto: candidato
+            ? "Leitura pela IA concluída."
+            : "A IA não encontrou um token na imagem.",
+        });
+      } catch {
+        atualizar(avisoIa, { texto: MSG_IA_COM_PROBLEMAS, alerta: true });
+      }
+    }
+
+    if (lerLocal) {
       const aviso = adicionar({
         autor: "assistente",
         tipo: "texto",
@@ -207,8 +236,9 @@ export default function WhatsAppSimulator({ onToast }) {
         <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
         <span>
           <strong>Simulação visual — não é o WhatsApp.</strong> Nada é enviado a
-          aplicativos de mensagem. A leitura de imagens é experimental, feita no
-          seu navegador, e o print não é salvo.
+          aplicativos de mensagem. Prints só vão para a IA do Google (Gemini) se
+          você concordar; sem isso, a leitura é feita no seu navegador. O print
+          não é salvo pelo protótipo.
         </span>
       </p>
 
@@ -247,7 +277,11 @@ export default function WhatsAppSimulator({ onToast }) {
                     {m.autor === "usuario" ? "Você:" : "Assistente:"}{" "}
                   </span>
                   {m.tipo === "texto" && (
-                    <p className="whitespace-pre-wrap break-words">{m.texto}</p>
+                    <p
+                      className={`whitespace-pre-wrap break-words ${m.alerta ? "font-semibold text-alerta-texto" : ""}`}
+                    >
+                      {m.texto}
+                    </p>
                   )}
 
                   {m.tipo === "imagem" && (
@@ -307,12 +341,38 @@ export default function WhatsAppSimulator({ onToast }) {
               <p className="flex-1 truncate text-xs text-texto">{anexo.nome}</p>
               <button
                 type="button"
-                onClick={() => setAnexo(null)}
+                onClick={() => {
+                  setAnexo(null);
+                  setConsentimentoIa(false);
+                }}
                 className="inline-flex min-h-alvo items-center gap-1 rounded-lg px-3 text-sm font-semibold text-perigo-texto hover:bg-superficie-2"
               >
                 <Trash2 size={16} aria-hidden="true" />
                 Remover imagem
               </button>
+            </div>
+          )}
+
+          {anexo && (
+            <div className="rounded-lg border border-borda-forte bg-superficie-2 p-3 text-xs text-texto">
+              <label htmlFor="consentimento-ia" className="flex cursor-pointer items-start gap-2">
+                <input
+                  id="consentimento-ia"
+                  type="checkbox"
+                  checked={consentimentoIa}
+                  onChange={(e) => setConsentimentoIa(e.target.checked)}
+                  aria-describedby="consentimento-ia-dica"
+                  className="mt-0.5 h-5 w-5 shrink-0"
+                />
+                <span className="font-semibold">
+                  Concordo em enviar este print ao Google Gemini para ler o token.
+                </span>
+              </label>
+              <p id="consentimento-ia-dica" className="mt-1 pl-7 text-texto-suave">
+                O Google pode guardar e revisar a imagem conforme os termos dele. Não envie
+                prints com documentos, senhas ou dados pessoais. Sem marcar, a leitura é feita
+                no seu navegador.
+              </p>
             </div>
           )}
 

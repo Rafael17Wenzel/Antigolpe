@@ -34,9 +34,11 @@ export default function ImageTokenReview({ id, candidato, origem, onConsultar, o
   }
 
   const titulo = candidato
-    ? origem === 'imagem'
-      ? 'Possível token lido na imagem (leitura experimental):'
-      : 'Possível token encontrado no texto:'
+    ? origem === 'ia'
+      ? 'Possível token lido na imagem pela IA (Gemini):'
+      : origem === 'imagem'
+        ? 'Possível token lido na imagem (leitura experimental):'
+        : 'Possível token encontrado no texto:'
     : 'Não identifiquei um token. Se você tiver o token, digite-o abaixo:';
 
   return (

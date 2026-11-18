@@ -26,6 +26,7 @@ public class WebConfig implements WebMvcConfigurer {
     private final LimiteRequisicoes limiteDenuncia;
     private final LimiteRequisicoes limiteSugestao;
     private final LimiteRequisicoes limiteLogin;
+    private final LimiteRequisicoes limiteGemini;
     private final Metricas metricas;
     private final JwtService jwt;
 
@@ -33,11 +34,13 @@ public class WebConfig implements WebMvcConfigurer {
                      @Qualifier("limiteDenuncia") LimiteRequisicoes limiteDenuncia,
                      @Qualifier("limiteSugestao") LimiteRequisicoes limiteSugestao,
                      @Qualifier("limiteLogin") LimiteRequisicoes limiteLogin,
+                     @Qualifier("limiteGemini") LimiteRequisicoes limiteGemini,
                      Metricas metricas, JwtService jwt) {
         this.limiteValidacao = limiteValidacao;
         this.limiteDenuncia = limiteDenuncia;
         this.limiteSugestao = limiteSugestao;
         this.limiteLogin = limiteLogin;
+        this.limiteGemini = limiteGemini;
         this.metricas = metricas;
         this.jwt = jwt;
     }
@@ -61,6 +64,9 @@ public class WebConfig implements WebMvcConfigurer {
         // Contra força bruta no login do RH
         registry.addInterceptor(new LimiteRequisicoesInterceptor("login", limiteLogin, metricas))
             .addPathPatterns("/api/admin/login");
+        // Protege a cota/custo da chave do Gemini
+        registry.addInterceptor(new LimiteRequisicoesInterceptor("ler-imagem", limiteGemini, metricas))
+            .addPathPatterns("/api/simulador/ler-imagem");
         registry.addInterceptor(new AdminAuthInterceptor(jwt))
             .addPathPatterns("/api/admin/**")
             .excludePathPatterns("/api/admin/login");
@@ -76,6 +82,11 @@ public class WebConfig implements WebMvcConfigurer {
         @Bean
         LimiteRequisicoes limiteDenuncia(@Value("${app.limite.denuncia.por-hora:10}") int porHora, Clock clock) {
             return new LimiteRequisicoes(porHora, Duration.ofHours(1), clock);
+        }
+
+        @Bean
+        LimiteRequisicoes limiteGemini(@Value("${app.limite.gemini.por-minuto:5}") int porMinuto, Clock clock) {
+            return new LimiteRequisicoes(porMinuto, Duration.ofMinutes(1), clock);
         }
 
         @Bean

@@ -75,12 +75,20 @@ As descrições são resumos do protótipo; a carga horária deve ser consultada
 
 ## Simulador de chat (demonstração)
 
+> **Leitura de prints por IA (Google Gemini).** Defina a chave **só no backend**:
+> `GEMINI_API_KEY` (Windows PowerShell: `$env:GEMINI_API_KEY="sua-chave"`; no Render: painel do serviço da API).
+> Nunca a coloque no frontend (`VITE_*`) nem no git. Sem a chave, o simulador avisa que o serviço está com
+> problemas e usa a leitura local.
+
 Em `http://localhost:5173/#/simulador` (link "Simulador de chat" no menu). É uma **simulação visual —
 não é o WhatsApp** e não envia nada a aplicativos de mensagem.
 
 - Cole a mensagem recebida ou anexe um print (PNG, JPEG ou WebP, até 5 MB).
-- O token é procurado no texto; sem token no texto, a imagem passa por **OCR experimental no navegador**
-  (`tesseract.js`, arquivos servidos pelo próprio site). A imagem não é enviada ao servidor nem salva.
+- O token é procurado no texto. Sem token no texto, a imagem é lida:
+  - pelo **Google Gemini**, se a pessoa marcar "Concordo em enviar este print ao Google Gemini" (via backend, até 5 envios/min);
+  - pela **leitura local** (`tesseract.js` no navegador) sem o aceite, ou quando a IA falha — nesse caso aparece
+    "O serviço de leitura por IA está com problemas no momento".
+  - O protótipo não salva o print.
 - O token encontrado aparece para **revisão e correção**; a consulta só acontece quando você confirmar,
   usando a mesma API do validador.
 
@@ -101,6 +109,9 @@ Modelos sem segredos em `backend/.env.example` e `frontend/.env.example`.
 | `DB_USER` / `DB_PASSWORD` | backend | `antigolpe` / — (dev) | Credenciais do banco |
 | `JWT_SECRET` | backend | aleatória a cada início | Chave do login do RH (mín. 32 caracteres). Sem ela, as sessões caem ao reiniciar |
 | `LIMITE_LOGIN_POR_MINUTO` | backend | `5` | Tentativas de login do RH por cliente |
+| `GEMINI_API_KEY` | backend | — | Chave do Google Gemini (leitura de prints). **Só no backend.** Sem ela, usa a leitura local |
+| `GEMINI_MODELO` | backend | `gemini-3.5-flash-lite` | Modelo do Gemini |
+| `LIMITE_GEMINI_POR_MINUTO` | backend | `5` | Envios de imagem à IA por cliente |
 | `PORT` | backend | `8080` | Porta HTTP (o Render define sozinho) |
 | `LIMITE_VALIDACAO_POR_MINUTO` / `LIMITE_DENUNCIA_POR_HORA` / `LIMITE_SUGESTAO_POR_MINUTO` | backend | `20` / `10` / `30` | Limite por cliente; acima dele a API responde `429` |
 | `FORWARD_HEADERS_STRATEGY` | backend | `none` | `native` atrás do proxy do Render (endereço real do cliente) |
@@ -169,7 +180,7 @@ npm run test:e2e      # Playwright + axe contra a API real (sobe o backend no pe
 ```
 
 Se o backend já estiver rodando, inicie-o com limites altos antes da suíte E2E (ela faz dezenas de consultas):
-`LIMITE_VALIDACAO_POR_MINUTO=10000 LIMITE_DENUNCIA_POR_HORA=10000 LIMITE_SUGESTAO_POR_MINUTO=10000 LIMITE_LOGIN_POR_MINUTO=10000`.
+`LIMITE_VALIDACAO_POR_MINUTO=10000 LIMITE_DENUNCIA_POR_HORA=10000 LIMITE_SUGESTAO_POR_MINUTO=10000 LIMITE_LOGIN_POR_MINUTO=10000 LIMITE_GEMINI_POR_MINUTO=10000`.
 
 ### Integração contínua
 
@@ -209,6 +220,7 @@ Contrato completo: [`contracts/api.yaml`](contracts/api.yaml). Erros sempre no f
 | POST | `/api/denuncias` | registra denúncia (201, protocolo `AG-…`); exige `aceiteAviso`; não é enviada a terceiros |
 | GET | `/api/vagas/sugestoes?uf=SP` | até 3 vagas publicadas (UF escolhida → remotas); sem links; vagas fictícias rotuladas |
 | GET | `/api/regioes` | 27 UFs para seleção manual de região |
+| POST | `/api/simulador/ler-imagem` | print (multipart, `consentimento=true`) → `{ token, origem: "ia" }` via Gemini; 503 = usar leitura local |
 | POST | `/api/admin/login` | login do RH → JWT (8 h) |
 | GET/POST/PUT/DELETE | `/api/admin/vagas[/{id}]` | gestão de vagas (requer `Authorization: Bearer`) |
 | POST | `/api/admin/vagas/{id}/encerrar` | encerra a vaga |

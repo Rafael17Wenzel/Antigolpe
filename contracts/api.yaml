@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Antigolpe API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     Protótipo acadêmico, não oficial. Não é canal oficial do Bradesco.
     Confirmado = correspondência em cadastro, não prova de autenticidade da mensagem.
@@ -28,6 +28,8 @@ info:
     - v0.7.0 (Sprint 11): `GET /api/vagas/exemplos` removido; área do RH em `/api/admin/**` com login
       JWT (`root`/`root`, D057), CRUD de vagas com token gerado e sempre visível (texto puro, D056),
       encerrar/excluir vaga, catálogo de cursos e lista de denúncias (somente leitura).
+    - v0.8.0 (Sprint 12): `POST /api/simulador/ler-imagem` — leitura do token de um print pelo Google
+      Gemini, com consentimento explícito; 503 quando a IA está indisponível (o site usa o OCR local).
 
     Cabeçalhos em todas as respostas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
     `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`,
@@ -161,6 +163,41 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
+
+  /api/simulador/ler-imagem:
+    post:
+      summary: Lê o token de um print com o Google Gemini (simulador de chat)
+      description: |
+        A imagem vai ao Google Gemini só com `consentimento=true`; não é gravada nem registrada em log.
+        O texto devolvido pelo modelo só é aceito se casar com o padrão de token (`BRD-…`). O resultado é
+        apenas uma SUGESTÃO para revisão humana; a confirmação continua sendo `POST /api/vagas/validar`.
+        Chave em `GEMINI_API_KEY` (só no backend); modelo em `GEMINI_MODELO` (padrão `gemini-3.5-flash-lite`).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [imagem, consentimento]
+              properties:
+                imagem: { type: string, format: binary, description: 'PNG, JPEG ou WebP (verificado pelo conteúdo), até 5 MB' }
+                consentimento: { type: boolean, description: aceite explícito do envio ao Google Gemini }
+      responses:
+        '200':
+          description: Leitura concluída (token pode ser nulo)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [origem]
+                properties:
+                  token: { type: string, nullable: true, example: BRD-BR-MG-T3B7R5Y9Q2X8M4VC }
+                  origem: { type: string, enum: [ia] }
+        '400': { description: 'Sem consentimento, sem imagem ou formato não aceito', content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '413': { $ref: '#/components/responses/CorpoGrande' }
+        '429':
+          $ref: '#/components/responses/LimiteExcedido'
+        '503': { description: 'IA indisponível ou não configurada (usar a leitura local)', content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
 
   /api/admin/login:
     post:
@@ -320,7 +357,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Erro' }
     CorpoGrande:
-      description: Corpo declarado acima de 32 KB (recusado antes de ser lido)
+      description: Corpo declarado acima de 32 KB (6 MB no upload de imagem), recusado antes de ser lido
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Erro' }

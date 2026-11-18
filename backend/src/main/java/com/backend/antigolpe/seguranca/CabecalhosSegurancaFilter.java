@@ -21,6 +21,9 @@ import java.io.IOException;
 public class CabecalhosSegurancaFilter extends OncePerRequestFilter {
 
     static final long CORPO_MAXIMO = 32 * 1024;
+    /** Upload do print para leitura por IA: até 5 MB de imagem + envelope multipart. */
+    static final long CORPO_MAXIMO_IMAGEM = 6L * 1024 * 1024;
+    static final String ROTA_IMAGEM = "/api/simulador/ler-imagem";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -35,7 +38,8 @@ public class CabecalhosSegurancaFilter extends OncePerRequestFilter {
         if (request.isSecure()) {
             response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
         }
-        if (request.getContentLengthLong() > CORPO_MAXIMO) {
+        long maximo = ROTA_IMAGEM.equals(request.getRequestURI()) ? CORPO_MAXIMO_IMAGEM : CORPO_MAXIMO;
+        if (request.getContentLengthLong() > maximo) {
             response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");

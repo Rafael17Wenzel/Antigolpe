@@ -18,6 +18,7 @@ Objetivo: saber se o serviço está saudável e como está sendo usado **sem gua
 | `antigolpe.denuncias` | — | Volume de denúncias |
 | `antigolpe.limite.excedido` | `rota` (validar, denuncias, sugestoes) | Abuso / necessidade de ajustar limites |
 | `antigolpe.indisponivel` | — | Falhas técnicas (banco etc.) |
+| `antigolpe.leitura.ia` | `resultado` (token, sem_token, erro, nao_configurado) | Uso e falhas da leitura por Gemini |
 
 ## O que nunca entra em logs ou métricas
 

@@ -34,6 +34,11 @@ public class Metricas {
         registry.counter("antigolpe.denuncias").increment();
     }
 
+    /** Leitura de print pela IA: token, sem_token, erro, nao_configurado. */
+    public void leituraIa(String resultado) {
+        registry.counter("antigolpe.leitura.ia", "resultado", resultado).increment();
+    }
+
     public void limiteExcedido(String rota) {
         registry.counter("antigolpe.limite.excedido", "rota", rota).increment();
     }

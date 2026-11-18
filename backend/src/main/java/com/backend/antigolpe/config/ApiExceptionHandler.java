@@ -113,6 +113,7 @@ public class ApiExceptionHandler {
         return switch (status.value()) {
             case 404 -> "Recurso não encontrado.";
             case 405 -> "Método não suportado.";
+            case 413 -> "Conteúdo grande demais (imagens: até 5 MB).";
             case 415 -> "Tipo de conteúdo não suportado.";
             default -> status.is4xxClientError()
                 ? "Requisição inválida."

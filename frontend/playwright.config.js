@@ -14,6 +14,9 @@ const LIMITES_E2E = {
   LIMITE_DENUNCIA_POR_HORA: '10000',
   LIMITE_SUGESTAO_POR_MINUTO: '10000',
   LIMITE_LOGIN_POR_MINUTO: '10000',
+  LIMITE_GEMINI_POR_MINUTO: '10000',
+  // Sem GEMINI_API_KEY de propósito: os testes cobrem a IA com respostas simuladas e o fallback real
+  GEMINI_API_KEY: '',
 };
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const API_URL = process.env.E2E_API_URL || 'http://localhost:8080';

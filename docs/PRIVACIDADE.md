@@ -10,6 +10,7 @@ configuráveis** (D031) e devem ser revistos se o projeto tiver uma política in
 | Validação (`validacao`) | id opaco (UUID), resultado interno, status público, referência ao token e à vaga (quando houver), data | texto/link/token consultado, IP, navegador, localização |
 | Denúncia (`denuncia`) | protocolo opaco, link/token/texto denunciado, e-mail **opcional**, descrição, referência opcional à validação, confirmação do aviso, data | IP, navegador, localização, arquivos/prints |
 | Token (`token`) | código em texto puro (desde a Sprint 11, D056), prefixo, 4 últimos caracteres, validade | — |
+| Print do simulador | **não é guardado** pelo protótipo. Com o aceite da pessoa, é enviado ao **Google Gemini** (terceiro) só para ler o token; o Google trata a imagem conforme os termos do Gemini API (na cota gratuita, pode guardar e revisar) | a imagem, em qualquer tabela ou log |
 
 ## Aviso exibido no formulário de denúncia
 

@@ -19,7 +19,8 @@ Cenários críticos e o teste que os comprova. Execução: `mvn test` (backend) 
 | 12 | Cabeçalhos | nosniff, DENY, no-referrer, CSP, no-store; HSTS em HTTPS | `SegurancaTest`, `seguranca.spec.js` |
 | 13 | Produção sem segredo/banco | Não sobe | `PersistenciaTokenTest`, `DemoDesligadoTest` |
 | 14 | Exemplos/dados fictícios em produção | Desligados (404) | `DemoDesligadoTest` |
-| 15 | Imagem do simulador | Não sai do navegador; OCR local | `chat.spec.js` |
+| 15 | Imagem do simulador | Sem aceite: não sai do navegador (OCR local). Com aceite: vai ao Gemini pelo backend, só em memória, sem log; resposta só aceita no formato de token; instruções escritas na imagem são ignoradas | `chat.spec.js`, `LeituraImagemTest` |
+| 19 | Chave do Gemini | Só no backend (`GEMINI_API_KEY`), enviada em cabeçalho (nunca na URL), ausente de logs e respostas; limite de 5 envios/min | `LeituraImagemTest`, `LeituraImagemSemChaveTest` |
 | 16 | Geolocalização | Nunca solicitada | `sugestoes.spec.js`, `chat.spec.js` |
 | 17 | Métricas | Sem token, e-mail ou URL nas etiquetas | `SegurancaTest.metricasContamResultadosSemDadosSensiveis` |
 

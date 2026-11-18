@@ -162,8 +162,75 @@ test.describe('Simulador de chat (Sprint 07)', () => {
     await expect(page.locator(LOG).getByText('Token encontrado no cadastro')).toBeVisible();
 
     expect(externas, 'OCR não deve buscar recursos externos').toEqual([]);
+    // Sem o aceite, nada vai para a IA
+    expect(uploads.some((u) => u.includes('consentimento'))).toBe(false);
     // A imagem nunca sai do navegador: o único POST é a consulta com o token revisado
     expect(uploads).toEqual([JSON.stringify({ tokenOuLink: TOKENS.mg })]);
+  });
+
+  test('IA (Gemini): só com aceite; token lido vai para revisão', async ({ page }) => {
+    const chamadas = [];
+    await page.route('**/api/simulador/ler-imagem', async (r) => {
+      chamadas.push(r.request().postData() || '');
+      await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: TOKENS.rj, origem: 'ia' }) });
+    });
+    await abrirSimulador(page);
+    await page.setInputFiles('#anexo-chat', path.join(FIXTURES, 'print-sem-token.png'));
+    const aceite = page.getByLabel('Concordo em enviar este print ao Google Gemini para ler o token.');
+    await expect(aceite).not.toBeChecked();
+    await aceite.check();
+    await page.getByRole('button', { name: 'Enviar' }).click();
+
+    const revisao = page.getByLabel('Possível token lido na imagem pela IA (Gemini):');
+    await expect(revisao).toHaveValue(TOKENS.rj);
+    await expect(page.getByText('Leitura pela IA concluída.')).toBeVisible();
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]).toContain('name="consentimento"');
+
+    // A confirmação continua sendo do cadastro, depois da revisão
+    await page.getByRole('button', { name: 'Consultar este token' }).click();
+    await expect(page.locator(LOG).getByText('Analista de Atendimento (Agência)')).toBeVisible();
+  });
+
+  test('IA sem token na imagem abre o campo manual, sem erro', async ({ page }) => {
+    await page.route('**/api/simulador/ler-imagem', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: '{"token":null,"origem":"ia"}' }),
+    );
+    await abrirSimulador(page);
+    await page.setInputFiles('#anexo-chat', path.join(FIXTURES, 'print-sem-token.png'));
+    await page.getByLabel(/Concordo em enviar este print/).check();
+    await page.getByRole('button', { name: 'Enviar' }).click();
+    await expect(page.getByText('A IA não encontrou um token na imagem.')).toBeVisible();
+    await expect(page.getByLabel('Não identifiquei um token. Se você tiver o token, digite-o abaixo:')).toHaveValue('');
+    await expect(page.getByText(/está com problemas/)).toHaveCount(0);
+  });
+
+  test('IA indisponível (API real sem chave): avisa e usa a leitura local', async ({ page }) => {
+    test.setTimeout(90_000);
+    const respostas = [];
+    page.on('response', (r) => r.url().includes('/api/simulador/ler-imagem') && respostas.push(r.status()));
+    await abrirSimulador(page);
+    await page.setInputFiles('#anexo-chat', path.join(FIXTURES, 'print-token.png'));
+    await page.getByLabel(/Concordo em enviar este print/).check();
+    await page.getByRole('button', { name: 'Enviar' }).click();
+
+    await expect(page.getByText('O serviço de leitura por IA está com problemas no momento. Vou usar a leitura local (experimental).')).toBeVisible();
+    const revisao = page.getByLabel('Possível token lido na imagem (leitura experimental):');
+    await expect(revisao).toHaveValue(TOKENS.mg, { timeout: 60_000 });
+    expect(respostas).toEqual([503]);
+  });
+
+  test('falha de rede na IA também usa a leitura local', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.route('**/api/simulador/ler-imagem', (r) => r.abort('connectionrefused'));
+    await abrirSimulador(page);
+    await page.setInputFiles('#anexo-chat', path.join(FIXTURES, 'print-token.png'));
+    await page.getByLabel(/Concordo em enviar este print/).check();
+    await page.getByRole('button', { name: 'Enviar' }).click();
+    await expect(page.getByText(/serviço de leitura por IA está com problemas/)).toBeVisible();
+    await expect(page.getByLabel('Possível token lido na imagem (leitura experimental):')).toHaveValue(TOKENS.mg, {
+      timeout: 60_000,
+    });
   });
 
   test('não pede geolocalização', async ({ page, context }) => {

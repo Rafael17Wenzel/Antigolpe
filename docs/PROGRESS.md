@@ -525,3 +525,25 @@ Para cada sprint preencher:
   - Credencial fixa `root`/`root` e token em texto puro: aceitáveis só em demonstração (D056, D057).
   - Três vagas fictícias de demonstração não têm token (como antes); editar e salvar uma delas emite um token.
   - Num banco que já existia antes da V4, só as vagas de demonstração ganham tokens de volta automaticamente; qualquer outra vaga precisa ser editada pelo RH para receber um token novo.
+
+---
+
+## Sprint 12 — Leitura de prints com Google Gemini no simulador — pedido do usuário
+
+**Status: CONCLUÍDA (2026-11-17), com a chamada real ao Google pendente de teste pelo usuário.** Regras definidas com o usuário antes do código (D061 a D063).
+
+- **Escopo e arquivos:**
+  - Backend: pacote `simulador` (`GeminiCliente`, `LeituraImagemService`, `SimuladorController`); `WebConfig` (limite de 5/min); `CabecalhosSegurancaFilter` (até 6 MB só nessa rota); `Metricas.leituraIa`; `ApiExceptionHandler` (mensagem do 413); `application.properties` (`GEMINI_API_KEY`, `GEMINI_MODELO`, multipart em memória).
+  - Testes: `LeituraImagemTest` (7, com servidor HTTP local no lugar do Google) e `LeituraImagemSemChaveTest` (1).
+  - Frontend: `WhatsAppSimulator` (caixa de aceite, leitura pela IA, aviso de problema e fallback), `ImageTokenReview` (rótulo "lido pela IA"), `api.js` (`lerImagemComIa`), `scripts/contraste.mjs` (+2 pares); `e2e/chat.spec.js` (+4).
+  - `render.yaml` (`GEMINI_API_KEY` informada no painel), `.env.example`, contrato v0.8.0, README, arquitetura, ENTREGA, PRIVACIDADE, SEGURANCA_EVIDENCIAS, OBSERVABILIDADE, BACKLOG; D061–D063.
+- **Migrações:** nenhuma.
+- **Testes executados e resultados:**
+  - `mvn -o -B test` com PostgreSQL 16 → **121 testes, 0 falhas**. Cobrem: token lido e normalizado; chave só no cabeçalho, nunca na URL nem nos logs; resposta sem token; texto fora do padrão descartado (inclusive "instrução" obedecida pela IA); HTTP 500/429, JSON inválido e tempo limite viram 503 sem detalhes; consentimento obrigatório; tipo de arquivo; 5 MB; sem chave = 503; limite de envios.
+  - Jar real sem chave: aceite → **503** com a mensagem de problema; sem aceite → **400**; arquivo de 5 MB + 100 bytes → **413**.
+  - Playwright → **65/65**, incluindo: IA com aceite (resposta simulada) → revisão → confirmação; IA sem token → campo manual; **API real sem chave → aviso + OCR local lê o token**; falha de rede → aviso + OCR local; sem aceite, nada vai à IA.
+  - `npm run contraste` → 0 falhas; `npm run build` → OK; contrato válido.
+- **Não testado:** a chamada real à API do Google (não há chave nem acesso de rede ao serviço no ambiente do assistente). Para testar: defina `GEMINI_API_KEY`, suba o backend, anexe `frontend/e2e/fixtures/print-token.png` no simulador com o aceite marcado.
+- **Pendências e riscos:**
+  - Cota gratuita do Gemini: o Google pode guardar e revisar as imagens; preferir cota paga se houver dados reais.
+  - Custo e limites da chave dependem do plano do usuário no Google AI Studio.

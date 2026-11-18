@@ -151,3 +151,38 @@ export function listarCursosRh(token) {
 export function listarDenunciasRh(token) {
   return request("/api/admin/denuncias", { token });
 }
+
+/**
+ * POST /api/simulador/ler-imagem (multipart): leitura do token de um print pelo Google Gemini.
+ * Só chamar com consentimento explícito da pessoa. Resposta: { token | null, origem: "ia" }.
+ * 503 (serviço com problemas), 429 (limite) ou falha de rede: usar a leitura local.
+ */
+export async function lerImagemComIa(arquivo) {
+  const dados = new FormData();
+  dados.append("imagem", arquivo);
+  dados.append("consentimento", "true");
+  let response;
+  try {
+    response = await fetch(`${API_URL}/api/simulador/ler-imagem`, {
+      method: "POST",
+      body: dados,
+      headers: { Accept: "application/json" }
+    });
+  } catch {
+    const error = new Error("Serviço de leitura por IA indisponível.");
+    error.status = 0;
+    throw error;
+  }
+  let corpo;
+  try {
+    corpo = await response.json();
+  } catch {
+    corpo = {};
+  }
+  if (!response.ok) {
+    const error = new Error(corpo.mensagem || `Erro na leitura por IA (HTTP ${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  return corpo;
+}

@@ -61,6 +61,8 @@ const pares = [
   ['texto-suave', 'chat-recebida', 4.5, 'hora/legenda na mensagem'],
   ['texto', 'chat-fundo', 4.5, 'texto sobre o fundo do chat'],
   ['primaria', 'chat-recebida', 4.5, 'link/ação em mensagem recebida'],
+  ['alerta-texto', 'chat-recebida', 4.5, 'aviso de IA com problemas no chat'],
+  ['superficie', 'perigo-texto', 4.5, 'botão Confirmar exclusão (área do RH)'],
 ];
 
 let falhas = 0;

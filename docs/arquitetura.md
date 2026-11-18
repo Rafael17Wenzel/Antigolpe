@@ -3,8 +3,8 @@
 > Protótipo acadêmico, **não oficial**. Atualizado na Sprint 10 (2026-11-17) para refletir o código entregue.
 
 O site (React) chama a API (Spring Boot), que consulta o PostgreSQL. A vaga é identificada **só pelo
-token**, procurado pelo código no banco. O RH administra as vagas numa área protegida por login (JWT). O simulador de chat e o OCR (em amarelo) são **simulações**
-que rodam no navegador e usam a mesma API do validador. A Escola Virtual da Fundação Bradesco aparece
+token**, procurado pelo código no banco. O RH administra as vagas numa área protegida por login (JWT). O simulador de chat (em amarelo) é uma **simulação**; com o aceite da pessoa, o print é lido pelo
+**Google Gemini** através do backend (a chave nunca vai ao navegador) e, se a IA falhar, pelo OCR local. A Escola Virtual da Fundação Bradesco aparece
 apenas como destino de links de cursos: não há integração.
 
 ![Arquitetura](img/arquitetura.png)
@@ -22,8 +22,8 @@ flowchart LR
     panel["ValidationPanel<br/>TokenValidationForm · ValidationResult"]
     neg["Somente se NÃO confirmado:<br/>ReportForm · cursos de acolhimento<br/>RegionalSuggestions"]
     pos["Se confirmado:<br/>CourseRecommendations"]
-    chat["WhatsAppSimulator (simulação)<br/>extrairToken · ImageTokenReview"]
-    ocr["OCR experimental no navegador<br/>tesseract.js · public/ocr"]
+    chat["WhatsAppSimulator (simulação)<br/>extrairToken · ImageTokenReview<br/>aceite para enviar print à IA"]
+    ocr["Fallback: OCR local no navegador<br/>tesseract.js · public/ocr"]
     rh["Área do RH (JWT)<br/>LoginRh · AreaRh<br/>vagas: criar · editar · encerrar · excluir<br/>denúncias: leitura"]
     api["api.js · fetch · VITE_API_URL<br/>Authorization: Bearer"]
     app --> panel & chat & rh
@@ -36,8 +36,8 @@ flowchart LR
     direction TB
     filt["CabecalhosSegurancaFilter<br/>cabeçalhos · corpo ≤ 32 KB"]
     lim["CORS (origens por env)<br/>LimiteRequisicoesInterceptor → 429<br/>AdminAuthInterceptor → 401"]
-    ctrl["Controllers<br/>vagas/validar · vagas/sugestoes · denuncias · regioes<br/>admin/login · admin/vagas · admin/denuncias · admin/cursos<br/>actuator/health"]
-    svc["Services<br/>ValidacaoService · TokenExtractor · TokenService<br/>AdminVagaService · JwtService (HS256)<br/>DenunciaService · SugestaoService · CursoConsulta"]
+    ctrl["Controllers<br/>vagas/validar · vagas/sugestoes · denuncias · regioes<br/>simulador/ler-imagem<br/>admin/login · admin/vagas · admin/denuncias · admin/cursos<br/>actuator/health"]
+    svc["Services<br/>ValidacaoService · TokenExtractor · TokenService<br/>LeituraImagemService · GeminiCliente<br/>AdminVagaService · JwtService (HS256)<br/>DenunciaService · SugestaoService · CursoConsulta"]
     obs["Metricas (Micrometer)<br/>logs com token mascarado"]
     job["RetencaoJob<br/>90 / 180 dias"]
     filt --> lim --> ctrl --> svc
@@ -45,6 +45,7 @@ flowchart LR
   end
 
   db[("PostgreSQL 16<br/>Flyway V1–V4")]
+  gem["Google Gemini API<br/>(externo · GEMINI_API_KEY)"]
   ev["Escola Virtual<br/>Fundação Bradesco<br/>(links de cursos)"]
 
   user --> FE
@@ -52,10 +53,11 @@ flowchart LR
   api -- "HTTPS / JSON" --> filt
   svc -- "JPA / JDBC" --> db
   job --> db
+  svc -- "print (com aceite) · HTTPS" --> gem
 
   classDef ext fill:#ecfdf5,stroke:#059669,color:#065f46;
   classDef sim fill:#fffbeb,stroke:#b45309,color:#78350f;
-  class ev ext;
+  class ev,gem ext;
   class chat,ocr sim;
 ```
 
