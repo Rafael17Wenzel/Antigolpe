@@ -9,10 +9,11 @@
 
 | Funcionalidade | Situação | Detalhe |
 |---|---|---|
-| Validação de token, link ou texto | **Real (no protótipo)** | Backend extrai o token por texto, confere o HMAC no PostgreSQL e aplica as regras (ativo, validade, vaga publicada, prefixo regional). Links nunca são acessados |
+| Validação de token, link ou texto | **Real (no protótipo)** | Backend extrai o token por texto, consulta o código no PostgreSQL e aplica as regras (ativo, validade, vaga publicada, prefixo regional). Links nunca são acessados |
 | Token regional `BRD-BR-<UF\|RM>-…` | **Real** | Prefixo só para leitura humana; trocar a UF impede a confirmação, nunca a produz |
 | Vaga identificada automaticamente | **Real** | Sem seletor de cargo: a vaga vem do token |
-| Cadastro de vagas e tokens | **Simulado** | 8 vagas e 7 tokens fictícios carregados por `DemoSeeder` quando `DEMO_SEED=true` (ou perfis `dev`/`h2`). Não há tela de cadastro nem área administrativa |
+| Cadastro de vagas e tokens | **Real no protótipo** | Área do RH (`#/login` → `#/admin`, usuário fixo `root`/`root`): criar, editar, encerrar e excluir vagas; o token é gerado automaticamente e fica sempre visível. Além disso, 8 vagas fictícias de demonstração (`DEMO_SEED=true` ou perfis `dev`/`h2`) |
+| Login do RH | **Real, com credencial fixa** | JWT de 8 horas; usuário `root`/`root` fixo no código (D057) — só para demonstração |
 | Denúncia | **Real no protótipo; não encaminhada** | Gravada no banco com protocolo `AG-…`, tokens mascarados, retenção de 180 dias. Não é enviada ao Bradesco nem a órgãos |
 | Histórico de validações | **Real** | Só resultado e data, sem o texto consultado; retenção de 90 dias |
 | Cursos recomendados | **Links reais, dados resumidos** | Títulos e categorias do catálogo público da Escola Virtual; descrições escritas para o protótipo; carga horária não informada (consultar o catálogo) |
@@ -27,7 +28,7 @@
 ## Limitações conhecidas
 
 - **Sem integração oficial** de nenhum tipo; nenhum dado vem de sistemas reais de vagas.
-- **Sem área administrativa:** cadastro de vagas/tokens e leitura das denúncias só direto no banco.
+- **Área do RH com um único usuário fixo (`root`/`root`)** e token em texto puro no banco: aceitáveis só em demonstração (D056, D057). Denúncias são somente leitura.
 - **Limite de requisições em memória:** vale por instância (suficiente para uma instância).
 - **OCR experimental:** falha com fonte pequena, fundo colorido ou compressão forte; primeiro uso baixa ~10 MB.
 - **Plano gratuito do Render:** API hiberna após 15 min sem uso; banco gratuito expira em 30 dias e não tem backup (`docs/DEPLOY.md`).

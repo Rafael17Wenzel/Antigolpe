@@ -3,7 +3,6 @@ package com.backend.antigolpe;
 import com.backend.antigolpe.demo.DemoSeeder;
 import com.backend.antigolpe.dto.ValidacaoResponse;
 import com.backend.antigolpe.tokens.FormatoToken;
-import com.backend.antigolpe.tokens.TokenHasher;
 import com.backend.antigolpe.tokens.TokenService;
 import com.backend.antigolpe.validacoes.ValidacaoService;
 import com.backend.antigolpe.vagas.Modalidade;
@@ -29,14 +28,13 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Sprint 03: migrations, constraints, armazenamento seguro do token e concorrência. */
+/** Sprint 03 (atualizado na D056): migrations, constraints, token em texto e concorrência. */
 @SpringBootTest
 class PersistenciaTokenTest {
 
     @Autowired JdbcTemplate jdbc;
     @Autowired VagaRepository vagas;
     @Autowired TokenService tokenService;
-    @Autowired TokenHasher hasher;
     @Autowired ValidacaoService validacaoService;
 
     @Test
@@ -48,18 +46,23 @@ class PersistenciaTokenTest {
     }
 
     @Test
-    void tokenNuncaEhGuardadoEmClaro() {
-        List<String> colunas = jdbc.queryForList(
-            "SELECT hash || '|' || prefixo || '|' || final_visivel FROM token", String.class);
-        assertThat(colunas).isNotEmpty();
-        assertThat(colunas).noneMatch(c -> c.contains("7K2M9Q4XH3TZ8NWD"));
-        assertThat(jdbc.queryForObject("SELECT hash FROM token WHERE final_visivel = '8NWD'", String.class))
-            .isEqualTo(hasher.hash(DemoSeeder.TOKEN_SP))
-            .hasSize(64);
+    void tokenEhGuardadoEmTextoNormalizado() {
+        // D056: o RH precisa consultar o token sempre, então ele fica em texto puro (maiúsculas)
+        assertThat(jdbc.queryForObject("SELECT codigo FROM token WHERE final_visivel = '8NWD'", String.class))
+            .isEqualTo(DemoSeeder.TOKEN_SP);
+        assertThat(jdbc.queryForObject("SELECT prefixo FROM token WHERE codigo = ?", String.class, DemoSeeder.TOKEN_SP))
+            .isEqualTo("BRD-BR-SP");
     }
 
     @Test
-    void hashDuplicadoEhRejeitadoPelaConstraint() {
+    void migrationRemoveuOHash() {
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE LOWER(table_name) = 'token' AND LOWER(column_name) = 'hash'",
+            Integer.class)).isZero();
+    }
+
+    @Test
+    void codigoDuplicadoEhRejeitadoPelaConstraint() {
         Vaga vaga = vagas.findBySlug("seguranca-informacao").orElseThrow();
         OffsetDateTime agora = OffsetDateTime.now();
         assertThatThrownBy(() -> tokenService.cadastrar(vaga, DemoSeeder.TOKEN_SP, agora, agora.plusDays(1)))
@@ -70,9 +73,9 @@ class PersistenciaTokenTest {
     void validadeInvertidaEhRejeitadaPeloBanco() {
         Long vagaId = vagas.findBySlug("seguranca-informacao").orElseThrow().getId();
         assertThatThrownBy(() -> jdbc.update("""
-            INSERT INTO token (vaga_id, hash, prefixo, final_visivel, valido_de, valido_ate)
+            INSERT INTO token (vaga_id, codigo, prefixo, final_visivel, valido_de, valido_ate)
             VALUES (?, ?, 'BRD-BR-SP', 'XXXX', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP - INTERVAL '1' DAY)
-            """, vagaId, "a".repeat(64)))
+            """, vagaId, "BRD-BR-SP-INVERTIDO000000X"))
             .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -111,7 +114,7 @@ class PersistenciaTokenTest {
         Vaga vaga = vagas.save(new Vaga("vaga-teste-ba", "Cargo de Teste", Modalidade.PRESENCIAL, "BA",
             "Salvador", "teste", SituacaoVaga.PUBLICADA, true));
         OffsetDateTime agora = OffsetDateTime.now();
-        String valor = tokenService.emitir(vaga, agora.minusMinutes(1), agora.plusDays(1));
+        String valor = tokenService.emitir(vaga, agora.minusMinutes(1), agora.plusDays(1)).getCodigo();
 
         ValidacaoResponse r = validacaoService.validar(valor);
         assertThat(r.status()).isEqualTo("CONFIRMADO");
@@ -154,8 +157,8 @@ class PersistenciaTokenTest {
                 try { return f.get(); } catch (Exception e) { return false; }
             }).count();
             assertThat(sucessos).isEqualTo(1);
-            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM token WHERE hash = ?", Integer.class,
-                hasher.hash(valor))).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM token WHERE codigo = ?", Integer.class,
+                valor)).isEqualTo(1);
         } finally {
             pool.shutdown();
         }

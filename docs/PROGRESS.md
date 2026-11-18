@@ -500,3 +500,28 @@ Para cada sprint preencher:
 - Imagem Docker não foi construída no ambiente do assistente (sem daemon); o primeiro build ocorrerá no Render.
 - Nome "bradesco" no logotipo do cabeçalho pode ser lido como marca oficial apesar das ressalvas; avaliar antes de publicação aberta.
 - Alertas `picomatch` em dependências de build (D048).
+
+---
+
+## Sprint 11 — Área do RH (login JWT, gestão de vagas, denúncias) — pedido do usuário
+
+**Status: CONCLUÍDA (2026-11-17).** Fora do pacote original de sprints; escopo e regras definidos com o usuário antes do código (D056 a D060).
+
+- **Escopo e arquivos:**
+  - Backend: pacote `admin` (`JwtService`, `AuthController`, `AdminAuthInterceptor`, `AdminController`, `AdminVagaService`, `AdminDtos`); `WebConfig` (interceptores, PUT/DELETE no CORS, limite de login); `Token`/`TokenRepository`/`TokenService`/`FormatoToken`/`ValidacaoService` sem HMAC; `DemoSeeder` sem sobrescrever; `CursoConsulta.catalogo()`; `Vaga.atualizar()`.
+  - Removidos: `TokenHasher`, `DemoController`, `ExemplosResponse`, `TokenHasherTest`.
+  - Migration `V4__token_em_texto.sql`.
+  - Frontend: `rh/` (`LoginRh`, `AreaRh`, `VagasRh`, `VagaFormRh`, `DenunciasRh`, `util`), `hooks/useSessaoRh.js`, rotas `#/login` e `#/admin` em `App.jsx`, botão **Entrar** no `Header`, `Hero` sem botões de simulação, `ValidationPanel` sem exemplos, `api.js` com chamadas autenticadas; removido `ArchitectureModal.jsx`.
+  - Testes: `AdminApiTest` (11), `SegurancaTest` (+1, força bruta no login), `PersistenciaTokenTest` ajustado; E2E `rh.spec.js` (9) e `acessibilidade.spec.js` ajustado.
+  - Contrato v0.7.0; `render.yaml` (`JWT_SECRET` no lugar de `TOKEN_HMAC_SECRET`); `.env.example`; README; arquitetura/MER/DER regenerados; ENTREGA, ROTEIRO_DEMO, DEPLOY, PRIVACIDADE, SEGURANCA_EVIDENCIAS.
+- **Migrações e impactos:** V4 remove `token.hash`, cria `token.codigo` (único) e **apaga os tokens existentes** (só tinham hash). Testado sobre um banco PostgreSQL já em V3 com dados: V4 aplicada, validações preservadas (referência ao token nula), tokens de demonstração recriados e confirmando.
+- **Testes executados e resultados:**
+  - `mvn -o -B test` com PostgreSQL 16 real → **113 testes, 0 falhas, 0 ignorados**. (Na primeira execução o PostgreSQL local estava parado e o teste de integração falhou por conexão recusada; após iniciar o serviço, tudo passou.)
+  - `npx eslint src e2e scripts` → OK; `npm run build` → OK (área do RH em chunk próprio, 20 kB).
+  - Playwright → **61/61** (inclui 9 da área do RH: rota protegida, senha errada, login/recarregar/sair, criar → validar → editar → encerrar → excluir, validação do formulário, denúncias somente leitura e abas por teclado, 401 volta ao login, axe nos dois temas).
+  - `swagger-cli validate contracts/api.yaml` → válido.
+  - Inspeção visual (capturas) da página inicial sem os botões, do login, da lista de vagas e do formulário.
+- **Pendências e riscos:**
+  - Credencial fixa `root`/`root` e token em texto puro: aceitáveis só em demonstração (D056, D057).
+  - Três vagas fictícias de demonstração não têm token (como antes); editar e salvar uma delas emite um token.
+  - Num banco que já existia antes da V4, só as vagas de demonstração ganham tokens de volta automaticamente; qualquer outra vaga precisa ser editada pelo RH para receber um token novo.

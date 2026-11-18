@@ -37,10 +37,10 @@ for (const tema of ['padrão', 'alto contraste']) {
       await semViolacoes(page, `erro / ${tema}`);
     });
 
-    test('modal de arquitetura aberto', async ({ page }) => {
-      await page.setViewportSize({ width: 1440, height: 900 });
-      await page.getByRole('button', { name: 'Arquitetura do projeto' }).click();
-      await semViolacoes(page, `modal / ${tema}`);
+    test('tela de login do RH', async ({ page }) => {
+      await page.goto('/#/login');
+      await page.getByRole('heading', { name: 'Entrar na área do RH' }).waitFor();
+      await semViolacoes(page, `login / ${tema}`);
     });
   });
 }
@@ -105,26 +105,13 @@ test('alto contraste usa paleta própria, persiste e é aplicado antes do React'
   await expect(page.getByRole('button', { name: 'Alto contraste' })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('modal: foco inicial, contido, Escape fecha e devolve o foco', async ({ page }) => {
+test('sem botões de simulação nem de arquitetura; Entrar leva ao login', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-  const abrir = page.getByRole('button', { name: 'Arquitetura do projeto' });
-  await abrir.click();
-
-  const dialogo = page.getByRole('dialog', { name: 'Arquitetura da solução' });
-  await expect(dialogo).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Fechar arquitetura' })).toBeFocused();
-
-  for (let i = 0; i < 5; i++) {
-    await page.keyboard.press('Tab');
-    expect(await page.evaluate(() => !!document.activeElement.closest('[role="dialog"]'))).toBe(true);
-  }
-  await page.keyboard.press('Shift+Tab');
-  expect(await page.evaluate(() => !!document.activeElement.closest('[role="dialog"]'))).toBe(true);
-
-  await page.keyboard.press('Escape');
-  await expect(dialogo).toBeHidden();
-  await expect(abrir).toBeFocused();
+  await expect(page.getByRole('button', { name: /Simular/ })).toHaveCount(0);
+  await expect(page.getByText('Arquitetura do projeto')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Entrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Entrar na área do RH' })).toBeFocused();
 });
 
 test('FAQ: acordeão com aria-expanded e conteúdo oculto', async ({ page }) => {

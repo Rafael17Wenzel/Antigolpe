@@ -13,6 +13,7 @@ const LIMITES_E2E = {
   LIMITE_VALIDACAO_POR_MINUTO: '10000',
   LIMITE_DENUNCIA_POR_HORA: '10000',
   LIMITE_SUGESTAO_POR_MINUTO: '10000',
+  LIMITE_LOGIN_POR_MINUTO: '10000',
 };
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const API_URL = process.env.E2E_API_URL || 'http://localhost:8080';

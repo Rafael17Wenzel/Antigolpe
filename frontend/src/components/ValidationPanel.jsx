@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CircleAlert, RefreshCw, ShieldAlert } from 'lucide-react';
 
 import CourseRecommendations from './CourseRecommendations';
@@ -6,15 +6,13 @@ import RegionalSuggestions from './RegionalSuggestions';
 import ReportForm from './ReportForm';
 import TokenValidationForm from './TokenValidationForm';
 import ValidationResult from './ValidationResult';
-import { obterExemplos, validarVaga } from '../api';
+import { validarVaga } from '../api';
 
 /**
  * Orquestra a validação: campo único -> backend identifica a vaga pelo token ->
  * resultado, cursos e (se não confirmado) denúncia opcional.
  */
-export default function ValidationPanel({ ref, onToast }) {
-  const [exemplos, setExemplos] = useState(null);
-
+export default function ValidationPanel({ onToast }) {
   const [tokenOuLink, setTokenOuLink] = useState('');
   const [validating, setValidating] = useState(false);
   const [result, setResult] = useState(null);
@@ -26,13 +24,6 @@ export default function ValidationPanel({ ref, onToast }) {
   const resultHeadingRef = useRef(null);
   const resultadoNegativoRef = useRef(null);
   const descricaoRef = useRef(null);
-
-  // Exemplos dos testes rápidos (só servem à demonstração; o painel funciona sem eles)
-  useEffect(() => {
-    obterExemplos()
-      .then(setExemplos)
-      .catch(() => setExemplos(null));
-  }, []);
 
   const rolarParaDenuncia = useCallback(() => {
     resultadoNegativoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -79,28 +70,6 @@ export default function ValidationPanel({ ref, onToast }) {
       }
     },
     [onToast],
-  );
-
-  // Testes rápidos disparados pelos botões do Hero (via ref no App)
-  useImperativeHandle(
-    ref,
-    () => ({
-      runQuickTest(type) {
-        const exemplo = type === 'valid' ? exemplos?.valido : exemplos?.golpe;
-
-        if (!exemplo) {
-          onToast({
-            message: 'Exemplos indisponíveis: verifique se o backend está executando.',
-            type: 'error',
-          });
-          return;
-        }
-
-        setTokenOuLink(exemplo.tokenOuLink);
-        executarValidacao(exemplo.tokenOuLink);
-      },
-    }),
-    [exemplos, executarValidacao, onToast],
   );
 
   function handleValidar(event) {

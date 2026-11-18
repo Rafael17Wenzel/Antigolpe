@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Menu, Network, ShieldCheck, X } from 'lucide-react';
+import { Building2, LayoutDashboard, LogIn, LogOut, Menu, X } from 'lucide-react';
 
 const links = [
   { href: '#validador', label: 'Validar vaga/token' },
@@ -7,7 +7,14 @@ const links = [
   { href: '#/simulador', label: 'Simulador de chat' },
 ];
 
-export default function Header({ onOpenArchitecture }) {
+const botaoPrimario =
+  'flex min-h-alvo items-center gap-2 rounded-lg bg-primaria px-4 text-sm font-bold text-primaria-sobre transition hover:bg-primaria-escura';
+const botaoSecundario =
+  'flex min-h-alvo items-center gap-2 rounded-lg border border-borda-forte bg-superficie-2 px-3 text-sm font-semibold text-texto transition hover:bg-borda';
+const itemMovel =
+  'flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold text-primaria hover:bg-primaria-clara';
+
+export default function Header({ sessao, onSair }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -42,14 +49,25 @@ export default function Header({ onOpenArchitecture }) {
             ))}
           </nav>
 
-          <button
-            type="button"
-            onClick={onOpenArchitecture}
-            className="hidden min-h-alvo items-center gap-2 rounded-lg border border-borda-forte bg-superficie-2 px-3 text-xs font-semibold text-texto transition hover:bg-borda xl:flex"
-          >
-            <Network size={16} aria-hidden="true" className="text-primaria" />
-            Arquitetura do projeto
-          </button>
+          <div className="hidden items-center gap-2 lg:flex">
+            {sessao ? (
+              <>
+                <a href="#/admin" className={botaoSecundario}>
+                  <LayoutDashboard size={16} aria-hidden="true" className="text-primaria" />
+                  Área do RH
+                </a>
+                <button type="button" onClick={onSair} className={botaoSecundario}>
+                  <LogOut size={16} aria-hidden="true" className="text-primaria" />
+                  Sair
+                </button>
+              </>
+            ) : (
+              <a href="#/login" className={botaoPrimario}>
+                <LogIn size={16} aria-hidden="true" />
+                Entrar
+              </a>
+            )}
+          </div>
 
           <button
             type="button"
@@ -77,17 +95,30 @@ export default function Header({ onOpenArchitecture }) {
             </a>
           ))}
 
-          <button
-            type="button"
-            onClick={() => {
-              setMobileOpen(false);
-              onOpenArchitecture();
-            }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold text-primaria hover:bg-primaria-clara"
-          >
-            <ShieldCheck size={17} aria-hidden="true" />
-            Arquitetura do projeto
-          </button>
+          {sessao ? (
+            <>
+              <a href="#/admin" onClick={() => setMobileOpen(false)} className={itemMovel}>
+                <LayoutDashboard size={17} aria-hidden="true" />
+                Área do RH
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  onSair();
+                }}
+                className={itemMovel}
+              >
+                <LogOut size={17} aria-hidden="true" />
+                Sair
+              </button>
+            </>
+          ) : (
+            <a href="#/login" onClick={() => setMobileOpen(false)} className={itemMovel}>
+              <LogIn size={17} aria-hidden="true" />
+              Entrar
+            </a>
+          )}
         </nav>
       )}
     </header>

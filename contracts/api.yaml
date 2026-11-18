@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Antigolpe API
-  version: 0.6.0
+  version: 0.7.0
   description: |
     Protótipo acadêmico, não oficial. Não é canal oficial do Bradesco.
     Confirmado = correspondência em cadastro, não prova de autenticidade da mensagem.
@@ -25,6 +25,10 @@ info:
       `413` para corpo acima de 32 KB; cabeçalhos de segurança em todas as respostas; tokens completos
       em `urlSuspeita`/`descricao` são guardados mascarados.
 
+    - v0.7.0 (Sprint 11): `GET /api/vagas/exemplos` removido; área do RH em `/api/admin/**` com login
+      JWT (`root`/`root`, D057), CRUD de vagas com token gerado e sempre visível (texto puro, D056),
+      encerrar/excluir vaga, catálogo de cursos e lista de denúncias (somente leitura).
+
     Cabeçalhos em todas as respostas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
     `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`,
     `Cache-Control: no-store` e, em HTTPS, `Strict-Transport-Security`.
@@ -46,20 +50,6 @@ paths:
                 required: [status]
                 properties:
                   status: { type: string, example: UP }
-
-  /api/vagas/exemplos:
-    get:
-      summary: Valores de demonstração dos botões de teste rápido
-      description: Só existe com dados de demonstração ativos (perfis dev e h2). Em produção responde 404.
-      x-nota: >-
-        Revisado na Sprint 08 (D041): devolve apenas tokens FICTÍCIOS e só com dados de demonstração
-        ativos; desligado em produção.
-      responses:
-        '200':
-          description: Exemplo válido e exemplo de golpe
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Exemplos' }
 
   /api/regioes:
     get:
@@ -172,8 +162,152 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
 
+  /api/admin/login:
+    post:
+      summary: Login do RH (usuário fixo root/root, D057)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [usuario, senha]
+              properties:
+                usuario: { type: string, maxLength: 100, example: root }
+                senha: { type: string, maxLength: 200, format: password }
+      responses:
+        '200':
+          description: JWT HS256 válido por 8 horas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, expiraEm, usuario]
+                properties:
+                  token: { type: string }
+                  expiraEm: { type: string, format: date-time }
+                  usuario: { type: string, example: root }
+        '400': { description: Campo ausente, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '401': { description: 'Usuário ou senha inválidos (mensagem única)', content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '429':
+          $ref: '#/components/responses/LimiteExcedido'
+
+  /api/admin/vagas:
+    get:
+      summary: Lista todas as vagas, com cursos e tokens (código visível)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Vagas, da mais recente para a mais antiga
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/VagaAdmin' } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+    post:
+      summary: Cria vaga e gera automaticamente um token BRD-BR-<UF|RM>-<16>
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VagaForm' }
+      responses:
+        '201':
+          description: Vaga criada, com o token gerado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VagaAdmin' }
+        '400': { description: Dados inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+
+  /api/admin/vagas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: slug da vaga }
+    get:
+      summary: Detalhe de uma vaga
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Vaga, content: { application/json: { schema: { $ref: '#/components/schemas/VagaAdmin' } } } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '404': { description: Vaga não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+    put:
+      summary: Edita a vaga
+      description: |
+        Mesma região: atualiza dados, cursos e a validade dos tokens ativos. Região diferente (UF/remota):
+        revoga os tokens ativos e emite um novo com o prefixo da nova região. Sem token ativo: emite um.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VagaForm' }
+      responses:
+        '200': { description: Vaga atualizada, content: { application/json: { schema: { $ref: '#/components/schemas/VagaAdmin' } } } }
+        '400': { description: Dados inválidos, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '404': { description: Vaga não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+    delete:
+      summary: Exclui definitivamente a vaga, seus tokens e cursos ligados
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Excluída }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '404': { description: Vaga não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+
+  /api/admin/vagas/{id}/encerrar:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Encerra a vaga (situação ENCERRADA; os tokens deixam de confirmar)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Vaga encerrada, content: { application/json: { schema: { $ref: '#/components/schemas/VagaAdmin' } } } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '404': { description: Vaga não encontrada, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+
+  /api/admin/cursos:
+    get:
+      summary: Catálogo de cursos para escolher na vaga
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Cursos, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Curso' } } } } }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+
+  /api/admin/denuncias:
+    get:
+      summary: Denúncias recebidas (somente leitura; as 500 mais recentes)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Denúncias, da mais recente para a mais antiga
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [protocolo, registradaEm, urlSuspeita, descricao, ligadaAValidacao]
+                  properties:
+                    protocolo: { type: string, example: AG-7K2M9Q4XH3 }
+                    registradaEm: { type: string, format: date-time }
+                    urlSuspeita: { type: string, description: tokens completos mascarados }
+                    descricao: { type: string }
+                    emailContato: { type: string, nullable: true }
+                    ligadaAValidacao: { type: boolean }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   responses:
+    NaoAutenticado:
+      description: Sem JWT, JWT adulterado ou expirado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
     LimiteExcedido:
       description: |
         Muitas requisições do mesmo cliente na janela (padrões: validação 20/min, denúncia 10/h,
@@ -191,6 +325,48 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Erro' }
   schemas:
+    VagaForm:
+      type: object
+      required: [cargo, modalidade, fonteCadastrada, situacao, ficticia, tokenValidoAte]
+      properties:
+        cargo: { type: string, minLength: 3, maxLength: 120 }
+        modalidade: { type: string, enum: [PRESENCIAL, HIBRIDA, REMOTA] }
+        uf: { type: string, nullable: true, pattern: '^[A-Za-z]{2}$', description: obrigatória exceto em REMOTA }
+        cidade: { type: string, nullable: true, maxLength: 100 }
+        fonteCadastrada: { type: string, maxLength: 200 }
+        situacao: { type: string, enum: [RASCUNHO, PUBLICADA, ENCERRADA] }
+        ficticia: { type: boolean }
+        tokenValidoAte: { type: string, format: date, description: 'vale até 23:59:59 (America/Sao_Paulo); não pode ser passada' }
+        cursos: { type: array, maxItems: 10, items: { type: string }, description: 'slugs do catálogo, na ordem desejada' }
+
+    VagaAdmin:
+      type: object
+      required: [id, cargo, modalidade, fonteCadastrada, situacao, ficticia, cursos, tokens]
+      properties:
+        id: { type: string, example: analista-de-credito-k3m9xq }
+        cargo: { type: string }
+        modalidade: { type: string, enum: [PRESENCIAL, HIBRIDA, REMOTA] }
+        uf: { type: string, nullable: true }
+        cidade: { type: string, nullable: true }
+        fonteCadastrada: { type: string }
+        situacao: { type: string, enum: [RASCUNHO, PUBLICADA, ENCERRADA] }
+        ficticia: { type: boolean }
+        criadaEm: { type: string, format: date-time }
+        cursos:
+          type: array
+          items: { type: object, properties: { id: { type: string }, titulo: { type: string } } }
+        tokens:
+          type: array
+          description: do mais antigo para o mais recente
+          items:
+            type: object
+            properties:
+              codigo: { type: string, example: BRD-BR-PE-7K2M9Q4XH3TZ8NWD }
+              situacao: { type: string, enum: [ATIVO, EXPIRADO, REVOGADO, AGENDADO] }
+              validoDe: { type: string, format: date-time }
+              validoAte: { type: string, format: date-time }
+              revogadoEm: { type: string, format: date-time, nullable: true }
+
     Erro:
       type: object
       required: [mensagem]
@@ -216,19 +392,6 @@ components:
         uf: { type: string, nullable: true, minLength: 2, maxLength: 2, description: Nula para vaga remota sem UF }
         cidade: { type: string, nullable: true }
         fonteCadastrada: { type: string, nullable: true }
-
-    Exemplo:
-      type: object
-      required: [tokenOuLink]
-      properties:
-        tokenOuLink: { type: string }
-
-    Exemplos:
-      type: object
-      required: [valido, golpe]
-      properties:
-        valido: { $ref: '#/components/schemas/Exemplo' }
-        golpe: { $ref: '#/components/schemas/Exemplo' }
 
     ValidacaoRequest:
       type: object

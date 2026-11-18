@@ -7,7 +7,6 @@ import com.backend.antigolpe.dto.VagaResumo;
 import com.backend.antigolpe.observabilidade.Metricas;
 import com.backend.antigolpe.tokens.FormatoToken;
 import com.backend.antigolpe.tokens.Token;
-import com.backend.antigolpe.tokens.TokenHasher;
 import com.backend.antigolpe.tokens.TokenRepository;
 import com.backend.antigolpe.vagas.Vaga;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,7 @@ import java.util.UUID;
 
 /**
  * Regra de validação: a vaga é identificada exclusivamente pelo token consultado
- * no cadastro (busca por HMAC). Nada é inferido do prefixo ou do texto da mensagem;
+ * no cadastro (busca pelo código, D056). Nada é inferido do prefixo ou do texto da mensagem;
  * o prefixo só pode impedir uma confirmação, nunca produzi-la.
  */
 @Service
@@ -42,18 +41,16 @@ public class ValidacaoService {
             + "oportunidade por um canal oficial.";
 
     private final TokenExtractor extractor;
-    private final TokenHasher hasher;
     private final TokenRepository tokenRepository;
     private final CursoConsulta cursoConsulta;
     private final ValidacaoRepository validacaoRepository;
     private final Clock clock;
     private final Metricas metricas;
 
-    public ValidacaoService(TokenExtractor extractor, TokenHasher hasher, TokenRepository tokenRepository,
+    public ValidacaoService(TokenExtractor extractor, TokenRepository tokenRepository,
                             CursoConsulta cursoConsulta, ValidacaoRepository validacaoRepository, Clock clock,
                             Metricas metricas) {
         this.extractor = extractor;
-        this.hasher = hasher;
         this.tokenRepository = tokenRepository;
         this.cursoConsulta = cursoConsulta;
         this.validacaoRepository = validacaoRepository;
@@ -75,7 +72,7 @@ public class ValidacaoService {
 
         Optional<Token> token;
         try {
-            token = tokenRepository.findByHash(hasher.hash(candidato.get()));
+            token = tokenRepository.findByCodigo(FormatoToken.normalizar(candidato.get()));
         } catch (RuntimeException ex) {
             throw new ServicoIndisponivelException(ex);
         }
@@ -115,7 +112,7 @@ public class ValidacaoService {
         if (!vaga.publicada()) {
             return ResultadoInterno.VAGA_INATIVA;
         }
-        Optional<String> regiao = FormatoToken.regiao(TokenHasher.normalizar(candidato));
+        Optional<String> regiao = FormatoToken.regiao(FormatoToken.normalizar(candidato));
         if (regiao.isPresent() && !regiao.get().equals(vaga.codigoRegional())) {
             return ResultadoInterno.PREFIXO_DIVERGENTE;
         }

@@ -2,7 +2,7 @@ const API_URL = (
   import.meta.env.VITE_API_URL || "http://localhost:8080"
 ).replace(/\/+$/, "");
 
-async function request(endpoint, { method = "GET", data } = {}) {
+async function request(endpoint, { method = "GET", data, token } = {}) {
   let response;
 
   try {
@@ -10,7 +10,8 @@ async function request(endpoint, { method = "GET", data } = {}) {
       method,
       headers: {
         ...(data !== undefined && { "Content-Type": "application/json" }),
-        Accept: "application/json"
+        Accept: "application/json",
+        ...(token && { Authorization: `Bearer ${token}` })
       },
       body: data !== undefined ? JSON.stringify(data) : undefined
     });
@@ -46,15 +47,6 @@ async function request(endpoint, { method = "GET", data } = {}) {
   }
 
   return result;
-}
-
-/**
- * GET /api/vagas/exemplos
- *
- * Retorno: { valido: { tokenOuLink }, golpe: { tokenOuLink } }
- */
-export function obterExemplos() {
-  return request("/api/vagas/exemplos");
 }
 
 /**
@@ -120,4 +112,42 @@ export function listarRegioes() {
 export function sugerirVagas(uf) {
   const query = uf ? `?uf=${encodeURIComponent(uf)}` : "";
   return request(`/api/vagas/sugestoes${query}`);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Área do RH (rotas protegidas por JWT). Erros 401 trazem error.status === 401.
+// ---------------------------------------------------------------------------------------------
+
+/** POST /api/admin/login → { token, expiraEm, usuario } */
+export function entrarComoRh(usuario, senha) {
+  return request("/api/admin/login", { method: "POST", data: { usuario, senha } });
+}
+
+export function listarVagasRh(token) {
+  return request("/api/admin/vagas", { token });
+}
+
+/** VagaForm: { cargo, modalidade, uf, cidade, fonteCadastrada, situacao, ficticia, tokenValidoAte, cursos } */
+export function criarVagaRh(token, form) {
+  return request("/api/admin/vagas", { method: "POST", data: form, token });
+}
+
+export function atualizarVagaRh(token, id, form) {
+  return request(`/api/admin/vagas/${encodeURIComponent(id)}`, { method: "PUT", data: form, token });
+}
+
+export function encerrarVagaRh(token, id) {
+  return request(`/api/admin/vagas/${encodeURIComponent(id)}/encerrar`, { method: "POST", token });
+}
+
+export function excluirVagaRh(token, id) {
+  return request(`/api/admin/vagas/${encodeURIComponent(id)}`, { method: "DELETE", token });
+}
+
+export function listarCursosRh(token) {
+  return request("/api/admin/cursos", { token });
+}
+
+export function listarDenunciasRh(token) {
+  return request("/api/admin/denuncias", { token });
 }

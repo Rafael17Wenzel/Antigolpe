@@ -50,7 +50,7 @@ class IndisponibilidadeTest {
 
     @Test
     void falhaDoBancoRetorna503SemDetalhes() throws Exception {
-        when(tokenRepository.findByHash(anyString()))
+        when(tokenRepository.findByCodigo(anyString()))
             .thenThrow(new DataAccessResourceFailureException("conexão recusada: segredo-interno"));
 
         MockMvcBuilders.webAppContextSetup(context).build()

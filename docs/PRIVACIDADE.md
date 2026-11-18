@@ -9,7 +9,7 @@ configuráveis** (D031) e devem ser revistos se o projeto tiver uma política in
 |---|---|---|
 | Validação (`validacao`) | id opaco (UUID), resultado interno, status público, referência ao token e à vaga (quando houver), data | texto/link/token consultado, IP, navegador, localização |
 | Denúncia (`denuncia`) | protocolo opaco, link/token/texto denunciado, e-mail **opcional**, descrição, referência opcional à validação, confirmação do aviso, data | IP, navegador, localização, arquivos/prints |
-| Token (`token`) | HMAC-SHA256, prefixo público (ex.: `BRD-BR-SP`), 4 últimos caracteres, validade | o valor do token em claro |
+| Token (`token`) | código em texto puro (desde a Sprint 11, D056), prefixo, 4 últimos caracteres, validade | — |
 
 ## Aviso exibido no formulário de denúncia
 

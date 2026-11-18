@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 
-/** Emissão e revogação de tokens. O valor em claro só existe no retorno de emitir(). */
+/** Emissão de tokens (guardados em texto puro, D056). */
 @Service
 public class TokenService {
 
@@ -15,11 +15,9 @@ public class TokenService {
     private static final char[] ALFABETO = "0123456789ABCDEFGHJKMNPQRSTVWXYZ".toCharArray();
 
     private final SecureRandom random = new SecureRandom();
-    private final TokenHasher hasher;
     private final TokenRepository repository;
 
-    public TokenService(TokenHasher hasher, TokenRepository repository) {
-        this.hasher = hasher;
+    public TokenService(TokenRepository repository) {
         this.repository = repository;
     }
 
@@ -31,20 +29,22 @@ public class TokenService {
         return FormatoToken.prefixo(vaga.codigoRegional()) + "-" + segredo;
     }
 
-    /** Emite um token aleatório para a vaga e devolve o valor em claro (único momento em que existe). */
+    /** Emite um token aleatório (único) para a vaga. */
     @Transactional
-    public String emitir(Vaga vaga, OffsetDateTime validoDe, OffsetDateTime validoAte) {
-        String valor = gerarValor(vaga);
-        cadastrar(vaga, valor, validoDe, validoAte);
-        return valor;
+    public Token emitir(Vaga vaga, OffsetDateTime validoDe, OffsetDateTime validoAte) {
+        String valor;
+        do {
+            valor = gerarValor(vaga);
+        } while (repository.existsByCodigo(valor));
+        return cadastrar(vaga, valor, validoDe, validoAte);
     }
 
-    /** Cadastra um valor conhecido (usado apenas pelos dados de demonstração). */
+    /** Cadastra um valor conhecido (dados de demonstração) ou recém-gerado. */
     @Transactional
     public Token cadastrar(Vaga vaga, String valor, OffsetDateTime validoDe, OffsetDateTime validoAte) {
-        String normalizado = TokenHasher.normalizar(valor);
+        String normalizado = FormatoToken.normalizar(valor);
         String prefixo = normalizado.substring(0, normalizado.lastIndexOf('-'));
         String finalVisivel = normalizado.substring(normalizado.length() - 4);
-        return repository.save(new Token(vaga, hasher.hash(normalizado), prefixo, finalVisivel, validoDe, validoAte));
+        return repository.save(new Token(vaga, normalizado, prefixo, finalVisivel, validoDe, validoAte));
     }
 }

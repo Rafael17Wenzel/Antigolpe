@@ -78,4 +78,17 @@ public class Vaga {
     public SituacaoVaga getSituacao() { return situacao; }
     public boolean isFicticia() { return ficticia; }
     public void setSituacao(SituacaoVaga situacao) { this.situacao = situacao; }
+    public OffsetDateTime getCriadaEm() { return criadaEm; }
+
+    /** Atualização feita pelo RH na área administrativa. */
+    public void atualizar(String cargo, Modalidade modalidade, String uf, String cidade,
+                          String fonteCadastrada, SituacaoVaga situacao, boolean ficticia) {
+        this.cargo = cargo;
+        this.modalidade = modalidade;
+        this.uf = uf;
+        this.cidade = cidade;
+        this.fonteCadastrada = fonteCadastrada;
+        this.situacao = situacao;
+        this.ficticia = ficticia;
+    }
 }

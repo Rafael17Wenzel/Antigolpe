@@ -1,5 +1,6 @@
 package com.backend.antigolpe.demo;
 
+import com.backend.antigolpe.tokens.TokenRepository;
 import com.backend.antigolpe.tokens.TokenService;
 import com.backend.antigolpe.vagas.Modalidade;
 import com.backend.antigolpe.vagas.SituacaoVaga;
@@ -22,8 +23,8 @@ import java.util.Map;
 
 /**
  * Dados FICTÍCIOS de demonstração. Só roda com app.demo.seed=true (perfis dev/h2);
- * nunca por padrão. É idempotente: a cada início, as vagas fictícias são
- * atualizadas e seus tokens regenerados com a chave HMAC vigente.
+ * nunca por padrão. É idempotente e não sobrescreve o que o RH alterou: só cria
+ * as vagas e os tokens de demonstração que ainda não existem.
  */
 @Component
 @ConditionalOnProperty(name = "app.demo.seed", havingValue = "true")
@@ -81,12 +82,15 @@ public class DemoSeeder implements ApplicationRunner {
 
     private final VagaRepository vagas;
     private final TokenService tokenService;
+    private final TokenRepository tokens;
     private final NamedParameterJdbcTemplate jdbc;
     private final Clock clock;
 
-    public DemoSeeder(VagaRepository vagas, TokenService tokenService, NamedParameterJdbcTemplate jdbc, Clock clock) {
+    public DemoSeeder(VagaRepository vagas, TokenService tokenService, TokenRepository tokens,
+                      NamedParameterJdbcTemplate jdbc, Clock clock) {
         this.vagas = vagas;
         this.tokenService = tokenService;
+        this.tokens = tokens;
         this.jdbc = jdbc;
         this.clock = clock;
     }
@@ -94,11 +98,12 @@ public class DemoSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        int vagasCriadas = 0;
         for (VagaDemo d : VAGAS) {
-            Vaga vaga = vagas.findBySlug(d.slug()).orElseGet(() -> vagas.save(new Vaga(
-                d.slug(), d.cargo(), d.modalidade(), d.uf(), d.cidade(), FONTE_DEMO, d.situacao(), true)));
-            vaga.setSituacao(d.situacao());
-            jdbc.update("DELETE FROM vaga_curso WHERE vaga_id = :id", Map.of("id", vaga.getId()));
+            if (vagas.findBySlug(d.slug()).isPresent()) continue;
+            Vaga vaga = vagas.save(new Vaga(
+                d.slug(), d.cargo(), d.modalidade(), d.uf(), d.cidade(), FONTE_DEMO, d.situacao(), true));
+            vagasCriadas++;
             short ordem = 1;
             for (String curso : d.cursos()) {
                 jdbc.update("""
@@ -109,16 +114,17 @@ public class DemoSeeder implements ApplicationRunner {
         }
         vagas.flush();
 
-        // Regenera os tokens das vagas fictícias com a chave HMAC vigente.
-        jdbc.update("DELETE FROM token WHERE vaga_id IN (SELECT id FROM vaga WHERE ficticia = TRUE)", Map.of());
         OffsetDateTime agora = OffsetDateTime.now(clock);
+        int tokensCriados = 0;
         for (TokenDemo t : TOKENS) {
+            if (tokens.existsByCodigo(t.valor())) continue;
             Vaga vaga = vagas.findBySlug(t.vagaSlug()).orElseThrow();
+            tokensCriados++;
             var token = tokenService.cadastrar(vaga, t.valor(), agora.plus(t.inicio()), agora.plus(t.fim()));
             if (t.revogado()) {
                 token.revogar(agora);
             }
         }
-        log.info("Dados fictícios de demonstração carregados: {} vagas, {} tokens.", VAGAS.size(), TOKENS.size());
+        log.info("Dados fictícios de demonstração: {} vaga(s) e {} token(s) criados.", vagasCriadas, tokensCriados);
     }
 }

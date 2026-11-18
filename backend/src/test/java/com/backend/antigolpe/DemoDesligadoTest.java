@@ -29,7 +29,6 @@ class DemoDesligadoTest {
         Properties props = PropertiesLoaderUtils.loadProperties(new ClassPathResource("application.properties"));
         // Ligável só por variável explícita (DEMO_SEED); o padrão continua desligado
         assertThat(props.getProperty("app.demo.seed")).isEqualTo("${DEMO_SEED:false}");
-        assertThat(props.getProperty("app.token.permitir-chave-efemera")).isEqualTo("false");
     }
 
     @Test

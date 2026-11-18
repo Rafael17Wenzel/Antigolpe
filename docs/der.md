@@ -1,7 +1,7 @@
 # DER — Diagrama Entidade-Relacionamento (lógico · PostgreSQL)
 
-> Atualizado na Sprint 10 (2026-11-17) a partir das migrations `V1__esquema_inicial.sql` e
-> `V3__validacao_e_denuncia.sql` (`V2` só insere dados de referência). O banco é criado e alterado
+> Atualizado na Sprint 11 (2026-11-17) a partir das migrations `V1__esquema_inicial.sql`,
+> `V3__validacao_e_denuncia.sql` e `V4__token_em_texto.sql` (`V2` só insere dados de referência). O banco é criado e alterado
 > **somente** pelo Flyway; o Hibernate apenas valida (`ddl-auto=validate`).
 
 ![DER](img/der.png)
@@ -41,7 +41,7 @@ erDiagram
   token {
     BIGINT id PK
     BIGINT vaga_id FK
-    CHAR_64 hash UK "HMAC-SHA256"
+    VARCHAR_40 codigo UK "texto puro (V4)"
     VARCHAR_12 prefixo "BRD-BR-UF"
     VARCHAR_4 final_visivel
     BOOLEAN ativo
@@ -103,7 +103,7 @@ erDiagram
 | Tabela | Restrição |
 |---|---|
 | `vaga` | `modalidade` ∈ PRESENCIAL/HIBRIDA/REMOTA; `situacao` ∈ RASCUNHO/PUBLICADA/ENCERRADA; `uf` obrigatória exceto em REMOTA; `slug` único |
-| `token` | Só o `hash` HMAC-SHA256 (único) — o token em claro **não é armazenado**; `prefixo` no formato `BRD-BR-__`; `valido_ate > valido_de` |
+| `token` | `codigo` em texto puro e único (V4, D056 — antes era só o hash HMAC); `prefixo` no formato `BRD-BR-__`; `valido_ate > valido_de` |
 | `vaga_curso`, `trilha_curso` | Chave composta; `ordem` única por vaga/trilha |
 | `validacao` | `status_publico` ∈ CONFIRMADO/NAO_CONFIRMADO; `resultado_interno` em lista fechada; referências viram `NULL` se o token/vaga for removido |
 | `denuncia` | `protocolo` único; `aceite_aviso = true`; ligação opcional com a validação |

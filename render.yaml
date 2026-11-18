@@ -26,8 +26,8 @@ services:
         fromDatabase:
           name: antigolpe-db
           property: connectionString
-      # Chave do HMAC dos tokens: gerada pelo Render (256 bits). Trocar a chave invalida os tokens cadastrados.
-      - key: TOKEN_HMAC_SECRET
+      # Chave de assinatura do JWT da área do RH: gerada pelo Render. Trocar a chave só derruba as sessões abertas.
+      - key: JWT_SECRET
         generateValue: true
       # URL do site estático, informada no painel na criação (ex.: https://antigolpe-web.onrender.com)
       - key: CORS_ALLOWED_ORIGINS

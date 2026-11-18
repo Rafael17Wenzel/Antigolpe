@@ -37,7 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
     "app.limite.validacao.por-minuto=3",
     "app.limite.denuncia.por-hora=2",
-    "app.limite.sugestao.por-minuto=2"
+    "app.limite.sugestao.por-minuto=2",
+    "app.limite.login.por-minuto=3"
 })
 class SegurancaTest {
 
@@ -48,13 +49,14 @@ class SegurancaTest {
     @Autowired @Qualifier("limiteValidacao") LimiteRequisicoes limiteValidacao;
     @Autowired @Qualifier("limiteDenuncia") LimiteRequisicoes limiteDenuncia;
     @Autowired @Qualifier("limiteSugestao") LimiteRequisicoes limiteSugestao;
+    @Autowired @Qualifier("limiteLogin") LimiteRequisicoes limiteLogin;
 
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(cabecalhos).build();
-        List.of(limiteValidacao, limiteDenuncia, limiteSugestao).forEach(LimiteRequisicoes::limpar);
+        List.of(limiteValidacao, limiteDenuncia, limiteSugestao, limiteLogin).forEach(LimiteRequisicoes::limpar);
     }
 
     private MockHttpServletRequestBuilder validar(String valor, String ip) {
@@ -95,6 +97,20 @@ class SegurancaTest {
 
         // Rotas sem limite seguem livres
         for (int i = 0; i < 5; i++) mvc.perform(get("/api/regioes")).andExpect(status().isOk());
+    }
+
+    @Test
+    void loginTemLimiteContraForcaBruta() throws Exception {
+        String errado = "{\"usuario\":\"root\",\"senha\":\"tentativa\"}";
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(post("/api/admin/login").contentType(MediaType.APPLICATION_JSON).content(errado))
+                .andExpect(status().isUnauthorized());
+        }
+        // Mesmo a senha certa é bloqueada até a janela liberar
+        mvc.perform(post("/api/admin/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"usuario\":\"root\",\"senha\":\"root\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(header().exists("Retry-After"));
     }
 
     @Test

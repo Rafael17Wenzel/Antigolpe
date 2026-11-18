@@ -30,7 +30,7 @@ no momento da criação.**
 | Variável | Serviço | Origem | Valor |
 |---|---|---|---|
 | `DATABASE_URL` | API | `fromDatabase` (automática) | `postgresql://…`; o app converte para JDBC (`DatabaseUrlEnvironmentPostProcessor`) |
-| `TOKEN_HMAC_SECRET` | API | `generateValue` (automática, 256 bits) | Nunca copiar para o git. Trocar invalida os tokens cadastrados |
+| `JWT_SECRET` | API | `generateValue` (automática) | Assina o login do RH. Trocar só derruba as sessões abertas |
 | `CORS_ALLOWED_ORIGINS` | API | **informar no painel** (`sync: false`) | URL do site, ex.: `https://antigolpe-web.onrender.com` |
 | `FORWARD_HEADERS_STRATEGY` | API | arquivo | `native` (IP real do cliente atrás do proxy, para o limite de requisições) |
 | `DEMO_SEED` | API | arquivo | `true` = vagas e tokens **fictícios e rotulados**. Use `false` em qualquer uso real |
@@ -66,7 +66,7 @@ acrescenta um sufixo: ajuste `CORS_ALLOWED_ORIGINS` e `VITE_API_URL` e faça nov
 |---|---|
 | Deploy da API ou do site com defeito | Painel → serviço → **Events/Deploys** → **Rollback** para o deploy anterior. Ou `git revert` + push (o CI precisa passar) |
 | Migration nova com defeito | Não editar a migration aplicada: criar `V(n+1)` corretiva. Rollback do código só é seguro se a migration for compatível com a versão anterior (por isso só mudanças aditivas) |
-| Chave HMAC trocada por engano | Restaurar o valor anterior (guardado pelo responsável fora do git); senão, reemitir os tokens |
+| Migration V4 (token em texto) | Os tokens anteriores, guardados só como hash, foram apagados por ela; vagas reais precisam de token novo (editar a vaga na área do RH emite um) |
 | Banco corrompido/perdido | Plano pago: restaurar backup/PITR pelo painel. Plano gratuito: **não há backup** — recriar o banco; as migrations e o `DEMO_SEED` recriam os dados de demonstração (validações e denúncias se perdem) |
 
 ## Política de backup proposta

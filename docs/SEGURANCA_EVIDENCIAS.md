@@ -13,7 +13,8 @@ Cenários críticos e o teste que os comprova. Execução: `mvn test` (backend) 
 | 7 | JSON malformado com token | `400` sem eco do valor | `SegurancaTest`, `seguranca.spec.js` |
 | 8 | Token em logs (mensagem ou stack trace) | Mascarado `BRD-BR-SP-************8NWD` | `SegurancaTest.logsNuncaContemTokenCompleto` |
 | 9 | Token em denúncia | Guardado mascarado | `SegurancaTest.denunciaGuardaTokenMascarado` |
-| 10 | Token armazenado | Só HMAC-SHA256 + prefixo + 4 últimos | `PersistenciaTokenTest` |
+| 10 | Token armazenado | **Texto puro** desde a Sprint 11 (D056, a pedido do projeto): visível ao RH; quem acessa o banco vê os tokens | `PersistenciaTokenTest` |
+| 18 | Área do RH | JWT HS256 (8 h, só `HS256`, assinatura em tempo constante), 401 sem token, adulterado ou `alg: none`; login com limite de 5/min | `AdminApiTest`, `SegurancaTest`, `rh.spec.js` |
 | 11 | HTML/script digitado | Exibido como texto (React escapa; sem `dangerouslySetInnerHTML`) | `seguranca.spec.js` |
 | 12 | Cabeçalhos | nosniff, DENY, no-referrer, CSP, no-store; HSTS em HTTPS | `SegurancaTest`, `seguranca.spec.js` |
 | 13 | Produção sem segredo/banco | Não sobe | `PersistenciaTokenTest`, `DemoDesligadoTest` |

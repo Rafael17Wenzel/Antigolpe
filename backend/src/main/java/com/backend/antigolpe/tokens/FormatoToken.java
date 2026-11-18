@@ -1,5 +1,6 @@
 package com.backend.antigolpe.tokens;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,6 +20,10 @@ public final class FormatoToken {
     private static final Pattern REGIONAL = Pattern.compile("^BRD-BR-([A-Z]{2})-([0-9A-Z]{" + TAMANHO_SEGREDO + "})$");
 
     private FormatoToken() {}
+
+    public static String normalizar(String token) {
+        return token.trim().toUpperCase(Locale.ROOT);
+    }
 
     /** Região indicada no prefixo, se o token estiver no formato regional. */
     public static Optional<String> regiao(String tokenNormalizado) {

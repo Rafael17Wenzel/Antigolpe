@@ -34,6 +34,16 @@ public class CursoConsulta {
             """, Map.of("vagaId", vagaId), MAPPER);
     }
 
+    /** Catálogo completo, para o RH escolher os cursos de uma vaga. */
+    public List<CursoResponse> catalogo() {
+        return jdbc.query("""
+            SELECT c.slug, c.titulo, c.descricao, cat.nome AS categoria
+              FROM curso c
+              JOIN categoria cat ON cat.id = c.categoria_id
+             ORDER BY c.titulo
+            """, MAPPER);
+    }
+
     public List<CursoResponse> daTrilha(String trilhaSlug) {
         return jdbc.query("""
             SELECT c.slug, c.titulo, c.descricao, cat.nome AS categoria

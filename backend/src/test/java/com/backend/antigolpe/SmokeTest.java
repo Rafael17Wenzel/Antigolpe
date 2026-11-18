@@ -50,11 +50,9 @@ class SmokeTest {
     }
 
     @Test
-    void exemplosDosTestesRapidos() throws Exception {
+    void endpointDeExemplosFoiRemovido() throws Exception {
         mvc.perform(get("/api/vagas/exemplos"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.valido.tokenOuLink").exists())
-            .andExpect(jsonPath("$.golpe.tokenOuLink").exists());
+            .andExpect(status().isNotFound());
     }
 
     @Test

@@ -19,6 +19,25 @@ backlog pós-MVP em [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ---
 
+## Área do RH (gestão de vagas)
+
+Botão **Entrar** no cabeçalho → login → área protegida (`#/admin`).
+
+| Usuário | Senha |
+|---|---|
+| `root` | `root` |
+
+> Credencial **fixa e pública**, só para demonstração (D057). Não use este protótipo com dados reais.
+
+- **Vagas:** criar, editar (cargo, modalidade, UF, cidade, fonte, situação, fictícia, validade do token e
+  cursos do catálogo), **encerrar** (situação ENCERRADA) e **excluir** definitivamente (com confirmação).
+- **Token:** gerado automaticamente ao criar a vaga (`BRD-BR-<UF|RM>-…`) e **sempre visível** para o RH,
+  com botão de copiar. Mudar a região da vaga revoga o token e gera outro com o novo prefixo.
+- **Denúncias:** lista somente leitura.
+- Sessão por JWT de 8 horas, guardada só na aba do navegador; "Sair" encerra na hora.
+
+---
+
 ## Tokens de demonstração
 
 Disponíveis **somente** com dados de demonstração ativos (`DEMO_SEED=true`, ou perfis `dev` e `h2`).
@@ -80,7 +99,8 @@ Modelos sem segredos em `backend/.env.example` e `frontend/.env.example`.
 | `SPRING_PROFILES_ACTIVE` | backend | — | `dev` (PostgreSQL local + demo), `h2` (sem banco instalado + demo), vazio = produção |
 | `DB_URL` | backend | obrigatória em produção | JDBC do PostgreSQL. Sem ela, a aplicação **não sobe** |
 | `DB_USER` / `DB_PASSWORD` | backend | `antigolpe` / — (dev) | Credenciais do banco |
-| `TOKEN_HMAC_SECRET` | backend | obrigatória em produção | Chave do HMAC dos tokens (mín. 32 caracteres). Gere com `openssl rand -base64 48` |
+| `JWT_SECRET` | backend | aleatória a cada início | Chave do login do RH (mín. 32 caracteres). Sem ela, as sessões caem ao reiniciar |
+| `LIMITE_LOGIN_POR_MINUTO` | backend | `5` | Tentativas de login do RH por cliente |
 | `PORT` | backend | `8080` | Porta HTTP (o Render define sozinho) |
 | `LIMITE_VALIDACAO_POR_MINUTO` / `LIMITE_DENUNCIA_POR_HORA` / `LIMITE_SUGESTAO_POR_MINUTO` | backend | `20` / `10` / `30` | Limite por cliente; acima dele a API responde `429` |
 | `FORWARD_HEADERS_STRATEGY` | backend | `none` | `native` atrás do proxy do Render (endereço real do cliente) |
@@ -112,8 +132,8 @@ cd backend
 SPRING_PROFILES_ACTIVE=dev DB_PASSWORD=sua-senha ./mvnw spring-boot:run
 ```
 
-O Flyway cria as tabelas sozinho no primeiro início. Sem `TOKEN_HMAC_SECRET`, o perfil `dev` usa
-uma chave efêmera e regenera os tokens de demonstração a cada início.
+O Flyway cria as tabelas sozinho no primeiro início. Os dados de demonstração só são criados se ainda
+não existirem (alterações feitas pelo RH são mantidas).
 
 Health check: http://localhost:8080/actuator/health → `{"status":"UP", ...}`
 
@@ -149,7 +169,7 @@ npm run test:e2e      # Playwright + axe contra a API real (sobe o backend no pe
 ```
 
 Se o backend já estiver rodando, inicie-o com limites altos antes da suíte E2E (ela faz dezenas de consultas):
-`LIMITE_VALIDACAO_POR_MINUTO=10000 LIMITE_DENUNCIA_POR_HORA=10000 LIMITE_SUGESTAO_POR_MINUTO=10000`.
+`LIMITE_VALIDACAO_POR_MINUTO=10000 LIMITE_DENUNCIA_POR_HORA=10000 LIMITE_SUGESTAO_POR_MINUTO=10000 LIMITE_LOGIN_POR_MINUTO=10000`.
 
 ### Integração contínua
 
@@ -189,7 +209,10 @@ Contrato completo: [`contracts/api.yaml`](contracts/api.yaml). Erros sempre no f
 | POST | `/api/denuncias` | registra denúncia (201, protocolo `AG-…`); exige `aceiteAviso`; não é enviada a terceiros |
 | GET | `/api/vagas/sugestoes?uf=SP` | até 3 vagas publicadas (UF escolhida → remotas); sem links; vagas fictícias rotuladas |
 | GET | `/api/regioes` | 27 UFs para seleção manual de região |
-| GET | `/api/vagas/exemplos` | exemplos dos testes rápidos (só com dados de demonstração) |
+| POST | `/api/admin/login` | login do RH → JWT (8 h) |
+| GET/POST/PUT/DELETE | `/api/admin/vagas[/{id}]` | gestão de vagas (requer `Authorization: Bearer`) |
+| POST | `/api/admin/vagas/{id}/encerrar` | encerra a vaga |
+| GET | `/api/admin/denuncias`, `/api/admin/cursos` | denúncias (leitura) e catálogo de cursos |
 | GET | `/actuator/health` | health check |
 
 Exemplo de resposta confirmada:

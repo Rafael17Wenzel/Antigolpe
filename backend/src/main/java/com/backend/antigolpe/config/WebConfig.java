@@ -1,5 +1,7 @@
 package com.backend.antigolpe.config;
 
+import com.backend.antigolpe.admin.AdminAuthInterceptor;
+import com.backend.antigolpe.admin.JwtService;
 import com.backend.antigolpe.observabilidade.Metricas;
 import com.backend.antigolpe.seguranca.LimiteRequisicoes;
 import com.backend.antigolpe.seguranca.LimiteRequisicoesInterceptor;
@@ -23,23 +25,28 @@ public class WebConfig implements WebMvcConfigurer {
     private final LimiteRequisicoes limiteValidacao;
     private final LimiteRequisicoes limiteDenuncia;
     private final LimiteRequisicoes limiteSugestao;
+    private final LimiteRequisicoes limiteLogin;
     private final Metricas metricas;
+    private final JwtService jwt;
 
     public WebConfig(@Qualifier("limiteValidacao") LimiteRequisicoes limiteValidacao,
                      @Qualifier("limiteDenuncia") LimiteRequisicoes limiteDenuncia,
                      @Qualifier("limiteSugestao") LimiteRequisicoes limiteSugestao,
-                     Metricas metricas) {
+                     @Qualifier("limiteLogin") LimiteRequisicoes limiteLogin,
+                     Metricas metricas, JwtService jwt) {
         this.limiteValidacao = limiteValidacao;
         this.limiteDenuncia = limiteDenuncia;
         this.limiteSugestao = limiteSugestao;
+        this.limiteLogin = limiteLogin;
         this.metricas = metricas;
+        this.jwt = jwt;
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
             .allowedOrigins(allowedOrigins)
-            .allowedMethods("GET", "POST", "OPTIONS")
+            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .exposedHeaders("Retry-After");
     }
 
@@ -51,6 +58,12 @@ public class WebConfig implements WebMvcConfigurer {
             .addPathPatterns("/api/denuncias");
         registry.addInterceptor(new LimiteRequisicoesInterceptor("sugestoes", limiteSugestao, metricas))
             .addPathPatterns("/api/vagas/sugestoes");
+        // Contra força bruta no login do RH
+        registry.addInterceptor(new LimiteRequisicoesInterceptor("login", limiteLogin, metricas))
+            .addPathPatterns("/api/admin/login");
+        registry.addInterceptor(new AdminAuthInterceptor(jwt))
+            .addPathPatterns("/api/admin/**")
+            .excludePathPatterns("/api/admin/login");
     }
 
     @Configuration
@@ -63,6 +76,11 @@ public class WebConfig implements WebMvcConfigurer {
         @Bean
         LimiteRequisicoes limiteDenuncia(@Value("${app.limite.denuncia.por-hora:10}") int porHora, Clock clock) {
             return new LimiteRequisicoes(porHora, Duration.ofHours(1), clock);
+        }
+
+        @Bean
+        LimiteRequisicoes limiteLogin(@Value("${app.limite.login.por-minuto:5}") int porMinuto, Clock clock) {
+            return new LimiteRequisicoes(porMinuto, Duration.ofMinutes(1), clock);
         }
 
         @Bean

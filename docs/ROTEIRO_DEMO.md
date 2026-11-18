@@ -22,7 +22,7 @@ Confira http://localhost:8080/actuator/health → `UP`. Tenha à mão o arquivo 
 | # | Passo | O que mostrar | Fala sugerida |
 |---|---|---|---|
 | 1 | Abrir o site | Faixa "Protótipo acadêmico — não é canal oficial do Bradesco" e o selo "Cadastro fictício" | "Tudo aqui é demonstração; nenhum dado é real." |
-| 2 | Colar `BRD-BR-MG-T3B7R5Y9Q2X8M4VC` e validar | **Vaga automática**: cargo e região aparecem sem escolher cargo; cursos da vaga; a tela não rola | "O backend identifica a vaga só pelo token, conferido por HMAC no banco." |
+| 2 | Colar `BRD-BR-MG-T3B7R5Y9Q2X8M4VC` e validar | **Vaga automática**: cargo e região aparecem sem escolher cargo; cursos da vaga; a tela não rola | "O backend identifica a vaga só pelo token, procurado no cadastro." |
 | 3 | Ler o aviso do resultado | "…não garante que a mensagem, o recrutador ou o link sejam autênticos" | "Confirmado é correspondência no cadastro, não atestado de autenticidade." |
 | 4 | **Token regional**: trocar `-MG-` por `-SP-` no mesmo token | `NAO_CONFIRMADO` | "O prefixo regional só ajuda a ler; ele pode impedir a confirmação, nunca produzi-la." |
 | 5 | Validar `BRD-BR-RJ-E7X2P9D4K8M3Q6WA` (expirado) | Mesma resposta de um token inexistente; nenhuma palavra "golpe" | "Não revelamos se o token existe (anti-enumeração) e não chamamos de golpe o que só não foi encontrado." |
@@ -34,7 +34,11 @@ Confira http://localhost:8080/actuator/health → `UP`. Tenha à mão o arquivo 
 | 11 | Colar uma mensagem com `BRD-BR-RM-H6N2C8W4Z9K5D3JF` e enviar | Token encontrado vai para **revisão**; nada é consultado antes de "Consultar este token" | "Revisão humana obrigatória." |
 | 12 | Anexar `print-token.png` e enviar | "Lendo a imagem (experimental)…", token lido, consulta confirmada | "OCR no navegador; a imagem não sai do dispositivo." |
 | 13 | Enviar "Pague a taxa de cadastro pelo Pix" | Sem token → campo vazio para digitar; nada é chamado de fraude | — |
-| 14 | (Opcional) Testes rápidos do topo | "Simular vaga cadastrada" / "Simular golpe / phishing" | — |
+| 14 | **Área do RH**: "Entrar" no cabeçalho, usuário `root`, senha `root` | Lista de vagas com o token de cada uma | "O RH administra as vagas; o token é gerado pelo sistema." |
+| 15 | "Nova vaga": cargo, UF, fonte, validade, cursos → "Criar vaga e gerar token" | Token `BRD-BR-<UF>-…` exibido | — |
+| 16 | Copiar o token, voltar ao validador e consultar | Vaga recém-criada confirmada | "O que o RH cadastra vale na hora." |
+| 17 | Encerrar e depois excluir a vaga (com confirmação) | O mesmo token passa a "não confirmado" | — |
+| 18 | Aba "Denúncias" | A denúncia do passo 6, somente leitura | — |
 
 Outros tokens fictícios: tabela no [`README.md`](../README.md#tokens-de-demonstração).
 
@@ -46,4 +50,4 @@ Outros tokens fictícios: tabela no [`README.md`](../README.md#tokens-de-demonst
 
 ## Evidências automatizadas do mesmo roteiro
 
-`npx playwright test` cobre os passos 2–13 (52 testes, inclusive axe nos dois temas e OCR real).
+`npx playwright test` cobre os passos 2–18 (61 testes, inclusive axe nos dois temas e OCR real).

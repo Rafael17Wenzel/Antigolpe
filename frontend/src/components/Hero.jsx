@@ -1,6 +1,6 @@
-import { CheckCircle2, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
-export default function Hero({ onQuickTest }) {
+export default function Hero() {
   return (
     <section
       aria-labelledby="titulo-principal"
@@ -32,25 +32,6 @@ export default function Hero({ onQuickTest }) {
             Protótipo acadêmico, não oficial. Não insira senhas, documentos ou dados bancários.
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => onQuickTest('valid')}
-              className="flex min-h-alvo items-center gap-2 rounded-lg bg-superficie px-4 text-sm font-bold text-primaria shadow-md transition hover:bg-primaria-clara"
-            >
-              <CheckCircle2 size={18} aria-hidden="true" />
-              Simular vaga cadastrada
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onQuickTest('phishing')}
-              className="flex min-h-alvo items-center gap-2 rounded-lg border border-heroi-sobre bg-escuro px-4 text-sm font-bold text-escuro-sobre shadow-md transition hover:opacity-90"
-            >
-              <TriangleAlert size={18} aria-hidden="true" />
-              Simular golpe / phishing
-            </button>
-          </div>
         </div>
       </div>
     </section>

@@ -21,7 +21,7 @@ flowchart TB
 
   REG --- a1(["<u>uf</u> · nome"])
   VAG --- a2(["<u>id</u> · slug · cargo · modalidade<br/>cidade · fonte · situação · fictícia"])
-  TOK --- a3(["<u>id</u> · hash HMAC · prefixo · final visível<br/>ativo · validade · revogado_em"])
+  TOK --- a3(["<u>id</u> · código · prefixo · final visível<br/>ativo · validade · revogado_em"])
   CUR --- a4(["<u>id</u> · slug · título · descrição"])
   CAT --- a5(["<u>id</u> · nome"])
   TRI --- a6(["<u>id</u> · slug · nome"])
@@ -37,7 +37,7 @@ flowchart TB
 |---|---|
 | REGIÃO | Unidade federativa (27 UFs) |
 | VAGA | Oportunidade cadastrada no protótipo (fictícia nos dados de demonstração) |
-| TOKEN | Código entregue ao candidato; guardado só como HMAC, com validade e possibilidade de revogação |
+| TOKEN | Código entregue ao candidato, gerado ao criar a vaga; guardado em texto (visível ao RH), com validade e revogação |
 | CURSO / CATEGORIA | Cursos do catálogo público da Escola Virtual (só título e categoria; sem carga horária) |
 | TRILHA | Sequência de cursos (ex.: segurança, mostrada no resultado não confirmado) |
 | VALIDAÇÃO | Registro mínimo de cada consulta: resultado e data, sem o texto consultado |
